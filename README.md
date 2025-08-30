@@ -15,4 +15,10 @@ cd REPO
 docker compose up -d --build
 
 # warten bis die DB "ready to accept connections" loggt:
-#   docker compose log
+#   docker compose logs -f db
+
+# OSM nach PostGIS importieren:
+docker compose run --rm osm2pgsql
+
+# Trinkbrunnen aus OSM in features übernehmen:
+docker compose exec db psql -U postgres -d osm_data -f /docker-entrypoint-initdb.d/003_osm_import.sql
