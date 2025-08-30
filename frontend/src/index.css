@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+html, body, #root { height: 100%; margin: 0; }
+.leaflet-container { width: 100%; height: 100%; }
+
+/* Vollbild-Karte */
+html, body, #root { height: 100%; margin: 0; }
+.leaflet-container { width: 100%; height: 100%; }
+
+/* Custom Marker (DivIcon) */
+.custom-marker { /* leeres Klassen-Wrapper für Leaflet */ }
+
+.marker-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;         /* kleine "Sprechblase"-Form */
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+
+.marker-emoji {
+  transform: rotate(45deg);             /* Emoji wieder „gerade“ drehen */
+  font-size: 16px;
+  line-height: 1;
+}

@@ -1,0 +1,17 @@
+FROM node:18-alpine
+
+# Arbeitsverzeichnis im Container
+WORKDIR /app
+
+# package.json zuerst kopieren und dependencies installieren
+COPY package*.json ./
+RUN npm install
+
+# restlichen Code kopieren
+COPY . .
+
+# React Dev-Server Port freigeben
+EXPOSE 3000
+
+# Startbefehl
+CMD ["npm", "start"]

@@ -1,0 +1,59 @@
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: webapp
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend   # Frontend wartet auf Backend
+
+  backend:
+    build: ./backend
+    container_name: api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      DB_DSN: "dbname=osm_data user=postgres password=postgres host=db port=5432"
+    depends_on:
+      - db
+
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: osm_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+
+  osm2pgsql:
+    image: iboates/osm2pgsql:latest
+    container_name: osm2pgsql
+    command: >
+      --create
+      --database=postgresql://postgres:postgres@db:5432/osm_data
+      --slim
+      --drop
+      --extra-attributes
+      --latlong
+      /osm/berlin.osm.pbf
+    depends_on:
+      - db
+    volumes:
+      - ./osm:/osm
+
+
+
+volumes:
+  pgdata:
+

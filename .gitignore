@@ -1,0 +1,28 @@
+# Node/React
+frontend/node_modules/
+frontend/build/
+
+# Python
+backend/__pycache__/
+*.pyc
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker/Volumes (DB-Daten bleiben lokal)
+pgdata/
+**/pgdata/
+**/postgres-data/
+
+# Logs
+*.log
+
+# Env/Secrets (falls du später .env nutzt)
+.env
+
+# Große Rohdaten (OSM-Download nicht versionieren)
+osm/*.pbf
+osm/*.osm
