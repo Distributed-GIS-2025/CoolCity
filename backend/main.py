@@ -34,7 +34,7 @@ class Marker(BaseModel):
 def get_conn():
     return psycopg2.connect(DB_DSN)
 
-@app.get("/drinking_fountains")
+@app.get("/features")
 def get_markers():
     with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
@@ -46,7 +46,7 @@ def get_markers():
         """)
         return list(cur.fetchall())
 
-@app.post("/drinking_fountains")
+@app.post("/features")
 def add_marker(marker: Marker):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("""
@@ -80,7 +80,7 @@ def reset_features():
 
     return {"status": "reset_done"}
 
-@app.delete("/drinking_fountains/{fid}")
+@app.delete("/features/{fid}")
 def delete_marker(fid: int):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("DELETE FROM features WHERE id = %s", (fid,))

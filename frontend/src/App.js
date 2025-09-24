@@ -46,7 +46,7 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
   }
 
   return (
-    <Popup position={[position.lat, position.lng]} onClose={onCancel}>
+    <Popup position={[position.lat, position.lng]} onClose={onCancel}>3
       <form onSubmit={handleSubmit} style={{ minWidth: 180 }}>
         <label style={{ display: "block", marginBottom: 6 }}>
           Typ:
@@ -77,7 +77,7 @@ export default function App() {
 
   /* ---- Laden ---- */
   useEffect(() => {
-    fetch("http://localhost:8000/drinking_fountains")
+    fetch("http://localhost:8000/features")
       .then((res) => res.json())
       .then((data) => {
         const casted = data.map((d) => ({
@@ -90,12 +90,12 @@ export default function App() {
         console.log("Fetched markers:", casted.length, casted[0]);
         setMarkers(casted);
       })
-      .catch((e) => console.error("GET /drinking_fountains failed:", e));
+      .catch((e) => console.error("GET /features failed:", e));
   }, []);
 
   /* ---- Hinzufügen ---- */
   function handleAdd(marker) {
-  fetch("http://localhost:8000/drinking_fountains", {
+  fetch("http://localhost:8000/features", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(marker),
@@ -112,13 +112,13 @@ export default function App() {
   /* ---- Löschen ---- */
   function handleDelete(id) {
   if (!id) return;
-  fetch(`http://localhost:8000/drinking_fountains/${id}`, { method: "DELETE" })
+  fetch(`http://localhost:8000/features/${id}`, { method: "DELETE" })
     .then((res) => {
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
       // Variante A: sofort lokal entfernen
       setMarkers((m) => m.filter((x) => x.id !== id));
       // Variante B (empfohlen): direkt neu laden, damit immer „Wahrheit aus DB“
-      return fetch("http://localhost:8000/drinking_fountains").then((r) => r.json());
+      return fetch("http://localhost:8000/features").then((r) => r.json());
     })
     .then((fresh) => fresh && setMarkers(fresh))
     .catch((e) => console.error("DELETE failed:", e));
@@ -145,7 +145,7 @@ return (
     >
       <button
         onClick={() =>
-          fetch("http://localhost:8000/drinking_fountains")
+          fetch("http://localhost:8000/features")
             .then((r) => r.json())
             .then(setMarkers)
         }
@@ -158,7 +158,7 @@ return (
           fetch("http://localhost:8000/reset_features", { method: "POST" })
             .then((r) => r.json())
             .then(() =>
-              fetch("http://localhost:8000/drinking_fountains")
+              fetch("http://localhost:8000/features")
                 .then((r) => r.json())
                 .then(setMarkers)
             )
