@@ -38,37 +38,14 @@ def get_conn():
 @app.get("/features")
 def get_markers():
     with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        """
-        cur.execute(
+        cur.execute("""
             SELECT id, name, type,
                    ST_Y(ST_AsText(geom::geometry)) AS lat,
                    ST_X(ST_AsText(geom::geometry)) AS lng
             FROM features
             ORDER BY id;
-        )
-        """
-        cur.execute("""
-            SELECT 
-            MIN(id) AS id,
-            'Bench cluster' AS name,
-            'Bench' AS type,
-            ST_Y(ST_Centroid(ST_Collect(geom::geometry))) AS lat,
-            ST_X(ST_Centroid(ST_Collect(geom::geometry))) AS lng,
-            COUNT(*) AS count
-            FROM features
-            WHERE type = 'Bench'
-            GROUP BY ST_SnapToGrid(geom::geometry, 0.001)
-
-            UNION ALL
-
-            SELECT 
-            id, name, type,
-            ST_Y(geom::geometry) AS lat,
-            ST_X(geom::geometry) AS lng,
-            1 AS count
-            FROM features
-            WHERE type <> 'Bench';
         """)
+        
 
         return list(cur.fetchall())
 

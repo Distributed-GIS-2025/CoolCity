@@ -9,7 +9,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - backend   # Frontend wartet auf Backend
+      - backend  
 
   backend:
     build: ./backend

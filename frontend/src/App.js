@@ -1,9 +1,10 @@
 import { useState, useEffect} from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON } from "react-leaflet";
-//import L from "leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import MarkerClusterGroup from 'react-leaflet-markercluster';
-import 'react-leaflet-markercluster/dist/styles.min.css';
+import MarkerClusterGroup from 'react-leaflet-cluster';
+import 'leaflet/dist/leaflet.css';
+
 
 
 /* ---- Typen (Emoji + Color) ---- */
@@ -219,7 +220,28 @@ return (
 
     {/* Benches clustering */}
             
-    <MarkerClusterGroup>
+    <MarkerClusterGroup chunkedLoading 
+    spiderfyOnEveryZoom={false}  
+    showCoverageOnHover={false}
+    maxClusterRadius={80}
+    iconCreateFunction={(cluster) => {
+    const count = cluster.getChildCount();
+    return L.divIcon({
+      html: `<div style="
+        background:#8b5cf6;
+        color:white;
+        border-radius:50%;
+        width:32px;
+        height:32px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:bold;
+      ">${count}</div>`,
+      className: "custom-cluster",
+      iconSize: [32, 32],
+    });
+  }}>
       {markers
       .filter(m => m.type === "Bench" && activeTypes.includes(m.type))
       .map(m => (
