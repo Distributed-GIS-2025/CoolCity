@@ -2,6 +2,8 @@ import { useState, useEffect} from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON } from "react-leaflet";
 //import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import MarkerClusterGroup from 'react-leaflet-markercluster';
+import 'react-leaflet-markercluster/dist/styles.min.css';
 
 
 /* ---- Typen (Emoji + Color) ---- */
@@ -215,12 +217,11 @@ return (
       <ClickHandler onClick={(pos) => setNewPosition(pos)} />
       
 
-      {/* Marker */}
-      
-      
-
+    {/* Benches clustering */}
+            
+    <MarkerClusterGroup>
       {markers
-      .filter(m => activeTypes.includes(m.type))
+      .filter(m => m.type === "Bench" && activeTypes.includes(m.type))
       .map(m => (
         <CircleMarker
           key={m.id}
@@ -236,9 +237,7 @@ return (
           >
           <Popup>
             <b>{m.type}</b>
-            {m.type === "Bench" && m.count > 1 && (
-            <div>{m.count} benches here</div>
-             )}    
+              
             <div style={{ marginTop: 6 }}>
               <button type="button" onClick={() => handleDelete(m.id)}>
                 ❌ Delete
@@ -247,8 +246,33 @@ return (
           </Popup>
         </CircleMarker>
       ))}
-
+    </MarkerClusterGroup>
       
+      {/* Other types without clustering */}
+      {markers
+      .filter(m => m.type !== "Bench" && activeTypes.includes(m.type))
+      .map(m => (
+        <CircleMarker
+          key={m.id}
+          center={[m.lat, m.lng]}
+          radius={6}
+          pathOptions={{
+            fillColor: TYPES.find(t => t.value === m.type)?.color || "yellow",
+            color: "white",
+            weight: 2,
+            fillOpacity: 1
+          }}
+        >
+          <Popup>
+            <b>{m.name}</b>
+            <div style={{ marginTop: 6 }}>
+              <button type="button" onClick={() => handleDelete(m.id)}>
+                ❌ Delete
+              </button>
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
 
         
       {/*
