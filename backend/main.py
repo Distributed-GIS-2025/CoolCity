@@ -57,7 +57,7 @@ def get_markers():
             COUNT(*) AS count
             FROM features
             WHERE type = 'Bench'
-            GROUP BY ST_SnapToGrid(geom::geometry, 0.001)
+            GROUP BY ST_SnapToGrid(geom::geometry, 0.003)
 
             UNION ALL
 
@@ -87,24 +87,17 @@ def add_marker(marker: Marker):
 @app.post("/reset_features")
 def reset_features():
     with get_conn() as conn, conn.cursor() as cur:
-        # wipe table
+        # wipe features
         cur.execute("TRUNCATE features RESTART IDENTITY;")
-
-        # insert only drinking fountains from amenity column
-        """ 
-        cur.execute(
-            INSERT INTO features (name, type, geom, osm_id)
-            SELECT
-                COALESCE(name, 'Drinking fountain'),
-                'Drinking fountain',
-                way,
-                osm_id
-            FROM planet_osm_point
-            WHERE amenity = 'drinking_water';
-        )
-        """
+        # copy everything back from backup
+        cur.execute("""
+            INSERT INTO features (id, name, type, geom)
+            SELECT id, name, type, geom
+            FROM features_backup;
+        """)
         conn.commit()
     return {"status": "reset_done"}
+
 
 
 @app.delete("/features/{fid}")

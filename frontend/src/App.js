@@ -7,10 +7,10 @@ import "leaflet/dist/leaflet.css";
 /* ---- Typen (Emoji + Color) ---- */
 const TYPES = [
   { value: "Drinking fountain", emoji: "💧", color: "#0ea5e9" },
-  { value: "Bench", emoji: "🪑", color: "#8b5cf6" },
+  { value: "Bench", emoji: "🪑", color: "#b06203ff" },
   { value: "Park", emoji: "🌳", color: "#169d47" },
   { value: "Fountain", emoji: "⛲", color: "#0749b2ff" },
-  { value: "Picnic table", emoji: "🍽️", color: "#f59e0b" },
+  { value: "Picnic table", emoji: "🍽️", color: "#ff9900ff" },
   { value: "Water playground", emoji: "🏖️", color: "#d40606ff" },
 ];
 
@@ -185,7 +185,7 @@ return (
             )
         }
       >
-        ♻️ Reset from OSM
+        ♻️ Reset from backup
       </button>
       {TYPES.map(t => (
       <button
