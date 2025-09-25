@@ -224,6 +224,7 @@ return (
     spiderfyOnEveryZoom={false}  
     showCoverageOnHover={false}
     maxClusterRadius={80}
+    disableClusteringAtZoom={17}
     iconCreateFunction={(cluster) => {
     const count = cluster.getChildCount();
     return L.divIcon({
@@ -231,8 +232,8 @@ return (
         background:#8b5cf6;
         color:white;
         border-radius:50%;
-        width:32px;
-        height:32px;
+        width:25px;
+        height:25px;
         display:flex;
         align-items:center;
         justify-content:center;
@@ -248,7 +249,7 @@ return (
         <CircleMarker
           key={m.id}
           center={[m.lat, m.lng]}
-          radius={7}
+          radius={6}
           pathOptions={{
             fillColor: TYPES.find(t => t.value === m.type)?.color || "yellow",
             color: "white",
@@ -281,7 +282,7 @@ return (
           pathOptions={{
             fillColor: TYPES.find(t => t.value === m.type)?.color || "yellow",
             color: "white",
-            weight: 2,
+            weight: 1,
             fillOpacity: 1
           }}
         >
