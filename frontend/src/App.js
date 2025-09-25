@@ -1,14 +1,19 @@
 import { useState, useEffect} from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON } from "react-leaflet";
 //import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-/* ---- Typen (Emoji + Farbe) ---- */
+
+/* ---- Typen (Emoji + Color) ---- */
 const TYPES = [
   { value: "Drinking fountain", emoji: "💧", color: "#0ea5e9" },
-  { value: "Bench",     emoji: "🪑", color: "#8b5cf6" },
-  { value: "Cooler place",   emoji: "🌳", color: "#169d47ff" },
+  { value: "Bench", emoji: "🪑", color: "#8b5cf6" },
+  { value: "Park", emoji: "🌳", color: "#169d47" },
+  { value: "Fountain", emoji: "⛲", color: "#0749b2ff" },
+  { value: "Picnic table", emoji: "🍽️", color: "#f59e0b" },
+  { value: "Water playground", emoji: "🏖️", color: "#d40606ff" },
 ];
+
 
 
 
@@ -68,7 +73,8 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
 export default function App() {
   const [markers, setMarkers] = useState([]);
   const [newPosition, setNewPosition] = useState(null);
-  const [activeTypes, setActiveTypes] = useState(TYPES.map(t => t.value)); // all enabled by default
+  const [activeTypes, setActiveTypes] = useState(TYPES.map(t => t.value));
+  const [districts, setDistricts] = useState([]);
 
   /* Filter */
   function toggleType(type) {
@@ -79,6 +85,12 @@ export default function App() {
   );
   } 
 
+  /* ---- District load ---- */
+  useEffect(() => {
+  fetch("http://localhost:8000/districts")
+    .then((res) => res.json())
+    .then(setDistricts);
+}, []);
 
   /* ---- Load ---- */
   useEffect(() => {
@@ -213,16 +225,20 @@ return (
         <CircleMarker
           key={m.id}
           center={[m.lat, m.lng]}
-          radius={6}
+          radius={7}
           pathOptions={{
             fillColor: TYPES.find(t => t.value === m.type)?.color || "yellow",
             color: "white",
-            weight: 2,
-            fillOpacity: 1
+            weight: 1,
+            fillOpacity: 1,
+            //stroke: false 
           }}
           >
           <Popup>
-            <b>{m.name}</b>
+            <b>{m.type}</b>
+            {m.type === "Bench" && m.count > 1 && (
+            <div>{m.count} benches here</div>
+             )}    
             <div style={{ marginTop: 6 }}>
               <button type="button" onClick={() => handleDelete(m.id)}>
                 ❌ Delete
@@ -253,6 +269,14 @@ return (
         </Marker>
       ))}
       */}
+
+      {districts.map((d, idx) => (
+      <GeoJSON
+        key={idx}
+        data={d.geometry}
+        style={{ color: "red", weight: 2, fillOpacity: 0 }}
+      />
+      ))}
 
 
       {/* Add-Form */}

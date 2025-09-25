@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE IF NOT EXISTS features (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('Drinking fountain','Bench','Cooler place')),
+  type TEXT NOT NULL CHECK (type IN ('Drinking fountain','Bench','Park')),
   geom GEOGRAPHY(POINT, 4326) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
