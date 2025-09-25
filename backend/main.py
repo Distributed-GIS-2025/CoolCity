@@ -29,7 +29,7 @@ class Marker(BaseModel):
     lat: float
     lng: float
     name: str
-    type: str  # 'Trinkbrunnen' | 'Sitzbank' | 'Kühler Ort'
+    type: str  # 'Drinking fountain' | 'Bench' | 'Cooler place'
 
 def get_conn():
     return psycopg2.connect(DB_DSN)
@@ -61,24 +61,24 @@ def add_marker(marker: Marker):
 @app.post("/reset_features")
 def reset_features():
     with get_conn() as conn, conn.cursor() as cur:
-        # alles löschen
+        # wipe table
         cur.execute("TRUNCATE features RESTART IDENTITY;")
 
-        # OSM-Daten neu importieren (hier Beispiel für Trinkbrunnen)
+        # insert only drinking fountains from amenity column
         cur.execute("""
             INSERT INTO features (name, type, geom, osm_id)
             SELECT
-                coalesce(tags->'name', 'Trinkbrunnen'),
-                'Trinkbrunnen',
+                COALESCE(name, 'Drinking fountain'),
+                'Drinking fountain',
                 way,
                 osm_id
             FROM planet_osm_point
-            WHERE tags ? 'amenity' AND tags->>'amenity' = 'drinking_water';
+            WHERE amenity = 'drinking_water';
         """)
 
         conn.commit()
-
     return {"status": "reset_done"}
+
 
 @app.delete("/features/{fid}")
 def delete_marker(fid: int):

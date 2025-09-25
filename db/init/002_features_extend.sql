@@ -1,4 +1,4 @@
--- Spalten hinzufügen (idempotent)
+-- Spalten Save (idempotent)
 ALTER TABLE features ADD COLUMN IF NOT EXISTS source TEXT;
 ALTER TABLE features ADD COLUMN IF NOT EXISTS osm_id BIGINT;
 
@@ -12,7 +12,7 @@ BEGIN
   END IF;
 END$$;
 
--- Optional: eindeutige OSM-ID pro Typ (nur wenn vorhanden)
+-- Optional: eindeutige OSM-ID pro Type (nur wenn vorhanden)
 DO $$
 BEGIN
   IF NOT EXISTS (

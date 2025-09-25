@@ -1,30 +1,16 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import L from "leaflet";
+import { useState, useEffect} from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl } from "react-leaflet";
+//import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 /* ---- Typen (Emoji + Farbe) ---- */
 const TYPES = [
-  { value: "Trinkbrunnen", emoji: "💧", color: "#0ea5e9" },
-  { value: "Sitzbank",     emoji: "🪑", color: "#8b5cf6" },
-  { value: "Kühler Ort",   emoji: "🌳", color: "#16a34a" },
+  { value: "Drinking fountain", emoji: "💧", color: "#0ea5e9" },
+  { value: "Bench",     emoji: "🪑", color: "#8b5cf6" },
+  { value: "Cooler place",   emoji: "🌳", color: "#169d47ff" },
 ];
 
-/* ---- Icon je Typ ---- */
-function iconFor(typeValue) {
-  const t = TYPES.find((t) => t.value === typeValue) || TYPES[0];
-  const html = `
-    <span class="marker-bubble" style="background:${t.color}">
-      <span class="marker-emoji">${t.emoji}</span>
-    </span>
-  `;
-  return L.divIcon({
-    className: "custom-marker",
-    html,
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -28],
-  });
-}
+
 
 /* ---- Klick-Handler: merkt Position für Formular ---- */
 function ClickHandler({ onClick }) {
@@ -36,9 +22,9 @@ function ClickHandler({ onClick }) {
   return null;
 }
 
-/* ---- Formular-Popup beim Hinzufügen ---- */
+/* ---- Formular-Popup beim Save ---- */
 function AddMarkerForm({ position, onAdd, onCancel }) {
-  const [type, setType] = useState("Trinkbrunnen");
+  const [type, setType] = useState("Drinking fountain");
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -46,10 +32,10 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
   }
 
   return (
-    <Popup position={[position.lat, position.lng]} onClose={onCancel}>3
+    <Popup position={[position.lat, position.lng]} onClose={onCancel}>
       <form onSubmit={handleSubmit} style={{ minWidth: 180 }}>
         <label style={{ display: "block", marginBottom: 6 }}>
-          Typ:
+          Type:
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -63,8 +49,16 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
           </select>
         </label>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onCancel}>Abbrechen</button>
-          <button type="submit">Hinzufügen</button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();   // ← add this
+              onCancel();
+            }}
+          >
+            Cancel
+</button>
+          <button type="submit">Save</button>
         </div>
       </form>
     </Popup>
@@ -74,8 +68,19 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
 export default function App() {
   const [markers, setMarkers] = useState([]);
   const [newPosition, setNewPosition] = useState(null);
+  const [activeTypes, setActiveTypes] = useState(TYPES.map(t => t.value)); // all enabled by default
 
-  /* ---- Laden ---- */
+  /* Filter */
+  function toggleType(type) {
+  setActiveTypes((prev) =>
+    prev.includes(type)
+      ? prev.filter((t) => t !== type) // remove if already active
+      : [...prev, type]                // add if not active
+  );
+  } 
+
+
+  /* ---- Load ---- */
   useEffect(() => {
     fetch("http://localhost:8000/features")
       .then((res) => res.json())
@@ -93,7 +98,7 @@ export default function App() {
       .catch((e) => console.error("GET /features failed:", e));
   }, []);
 
-  /* ---- Hinzufügen ---- */
+  /* ---- Save ---- */
   function handleAdd(marker) {
   fetch("http://localhost:8000/features", {
     method: "POST",
@@ -109,20 +114,22 @@ export default function App() {
 }
 
 
-  /* ---- Löschen ---- */
+  /* ---- Delete ---- */
   function handleDelete(id) {
   if (!id) return;
   fetch(`http://localhost:8000/features/${id}`, { method: "DELETE" })
     .then((res) => {
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-      // Variante A: sofort lokal entfernen
-      setMarkers((m) => m.filter((x) => x.id !== id));
-      // Variante B (empfohlen): direkt neu laden, damit immer „Wahrheit aus DB“
+      // Option A: remove immediately locally
+      // setMarkers((m) => m.filter((x) => x.id !== id));
+      // Option B (recommended): reload directly to always get “truth from DB”
       return fetch("http://localhost:8000/features").then((r) => r.json());
     })
     .then((fresh) => fresh && setMarkers(fresh))
     .catch((e) => console.error("DELETE failed:", e));
 }
+
+
 
 
 return (
@@ -135,6 +142,7 @@ return (
         left: 12,
         zIndex: 9999,
         display: "flex",
+        flexDirection: "column",
         gap: 8,
         background: "white",
         border: "1px solid #ddd",
@@ -142,7 +150,7 @@ return (
         padding: "6px 8px",
         boxShadow: "0 4px 16px rgba(0,0,0,.15)"
       }}
-    >
+    > {/* 
       <button
         onClick={() =>
           fetch("http://localhost:8000/features")
@@ -152,6 +160,7 @@ return (
       >
         🔄 Neu laden
       </button>
+      */}
 
       <button
         onClick={() =>
@@ -164,35 +173,87 @@ return (
             )
         }
       >
-        ♻️ Reset auf OSM
+        ♻️ Reset from OSM
       </button>
+      {TYPES.map(t => (
+      <button
+        key={t.value}
+        onClick={() => toggleType(t.value)}
+        style={{
+          opacity: activeTypes.includes(t.value) ? 1 : 0.4
+        }}
+      >
+        {t.emoji} {t.value}
+      </button>
+))}
+
     </div>
 
-    <MapContainer center={[52.52, 13.405]} zoom={13} scrollWheelZoom>
-      <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
+    <MapContainer 
+    center={[52.52, 13.405]} 
+    zoom={13} 
+    scrollWheelZoom
+     zoomControl={false} 
+    >
+      <ZoomControl position="topright" /> 
+    <TileLayer
+      attribution='&copy; OpenStreetMap contributors'
+      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    />
       <ClickHandler onClick={(pos) => setNewPosition(pos)} />
+      
 
       {/* Marker */}
+      
+      
+
+      {markers
+      .filter(m => activeTypes.includes(m.type))
+      .map(m => (
+        <CircleMarker
+          key={m.id}
+          center={[m.lat, m.lng]}
+          radius={6}
+          pathOptions={{
+            fillColor: TYPES.find(t => t.value === m.type)?.color || "yellow",
+            color: "white",
+            weight: 2,
+            fillOpacity: 1
+          }}
+          >
+          <Popup>
+            <b>{m.name}</b>
+            <div style={{ marginTop: 6 }}>
+              <button type="button" onClick={() => handleDelete(m.id)}>
+                ❌ Delete
+              </button>
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
+
+      
+
+        
+      {/*
       {markers.map((m) => (
         <Marker
           key={m.id ?? `${m.lat},${m.lng}`}
           position={[m.lat, m.lng]}
-          icon={iconFor(m.type || m.name)}
+          //icon={iconFor(m.type || m.name)}
         >
           <Popup>
             <b>{m.name}</b>
             <div style={{ marginTop: 6 }}>
               <button type="button" onClick={() => handleDelete(m.id)}>
-                ❌ Löschen
+                ❌ Delete
               </button>
             </div>
           </Popup>
         </Marker>
       ))}
+      */}
+
 
       {/* Add-Form */}
       {newPosition && (
