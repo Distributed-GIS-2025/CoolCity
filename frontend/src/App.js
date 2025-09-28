@@ -10,10 +10,10 @@ import 'leaflet/dist/leaflet.css';
 /* ---- Typen (Emoji + Color) ---- */
 const TYPES = [
   { value: "Drinking fountain", emoji: "💧", color: "#0ea5e9" },
-  { value: "Bench", emoji: "🪑", color: "#8b5cf6" },
+  { value: "Bench", emoji: "🪑", color: "#a25900ff" },
   { value: "Park", emoji: "🌳", color: "#169d47" },
   { value: "Fountain", emoji: "⛲", color: "#0749b2ff" },
-  { value: "Picnic table", emoji: "🍽️", color: "#f59e0b" },
+  { value: "Picnic table", emoji: "🍽️", color: "#ff7300ff" },
   { value: "Water playground", emoji: "🏖️", color: "#d40606ff" },
 ];
 
@@ -205,10 +205,10 @@ return (
     </div>
 
     <MapContainer 
-    center={[52.52, 13.405]} 
+    center={[52.532, 13.366]} 
     zoom={13} 
     scrollWheelZoom
-     zoomControl={false} 
+    zoomControl={false} 
     >
       <ZoomControl position="topright" /> 
     <TileLayer
@@ -220,25 +220,26 @@ return (
 
     {/* Benches clustering */}
             
-    <MarkerClusterGroup chunkedLoading 
+    <MarkerClusterGroup 
+    chunkedLoading 
     spiderfyOnEveryZoom={false}  
     showCoverageOnHover={false}
-    maxClusterRadius={80}
-    disableClusteringAtZoom={17}
+    maxClusterRadius={50}
+    disableClusteringAtZoom={16}
     iconCreateFunction={(cluster) => {
-    const count = cluster.getChildCount();
-    return L.divIcon({
+      const color = TYPES.find(t => t.value === "Bench")?.color || "gray";
+      return L.divIcon({
       html: `<div style="
-        background:#8b5cf6;
+        background:${color};
         color:white;
         border-radius:50%;
-        width:25px;
-        height:25px;
+        width:10px;
+        height:10px;
         display:flex;
         align-items:center;
         justify-content:center;
         font-weight:bold;
-      ">${count}</div>`,
+      "></div>`,
       className: "custom-cluster",
       iconSize: [32, 32],
     });
@@ -260,7 +261,6 @@ return (
           >
           <Popup>
             <b>{m.type}</b>
-              
             <div style={{ marginTop: 6 }}>
               <button type="button" onClick={() => handleDelete(m.id)}>
                 ❌ Delete
@@ -287,7 +287,7 @@ return (
           }}
         >
           <Popup>
-            <b>{m.name}</b>
+            <b>{m.type}</b>
             <div style={{ marginTop: 6 }}>
               <button type="button" onClick={() => handleDelete(m.id)}>
                 ❌ Delete
@@ -297,26 +297,7 @@ return (
         </CircleMarker>
       ))}
 
-        
-      {/*
-      {markers.map((m) => (
-        <Marker
-          key={m.id ?? `${m.lat},${m.lng}`}
-          position={[m.lat, m.lng]}
-          //icon={iconFor(m.type || m.name)}
-        >
-          <Popup>
-            <b>{m.name}</b>
-            <div style={{ marginTop: 6 }}>
-              <button type="button" onClick={() => handleDelete(m.id)}>
-                ❌ Delete
-              </button>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-      */}
-
+      {/* Districts */}
       {districts.map((d, idx) => (
       <GeoJSON
         key={idx}
