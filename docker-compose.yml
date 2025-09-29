@@ -39,24 +39,6 @@ services:
       - ./backend/data:/data
       
 
-  osm2pgsql:
-    image: iboates/osm2pgsql:latest
-    container_name: osm2pgsql
-    command: >
-      --create
-      --database=postgresql://postgres:postgres@db:5432/osm_data
-      --slim
-      --drop
-      --extra-attributes
-      --latlong
-      /osm/berlin.osm.pbf
-    depends_on:
-      - db
-    volumes:
-      - ./osm:/osm
-
-
-
 volumes:
   pgdata:
 
