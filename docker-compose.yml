@@ -33,7 +33,7 @@ services:
   #     # - max_y=52.7
   #   restart: unless-stopped
 
-  # valhalla (funktionierende Konfiguration mit Standard-Image):
+  # valhalla (funktionierende Konfiguration mit Berlin Mitte BBox):
   valhalla:
     image: ghcr.io/valhalla/valhalla:latest
     container_name: valhalla
@@ -44,16 +44,21 @@ services:
       - valhalla_tiles:/valhalla_tiles
     environment:
       - VALHALLA_BUILD_TILES=true
+      # Berlin Mitte BBox für bessere Performance
+      - min_x=13.35
+      - min_y=52.50
+      - max_x=13.45
+      - max_y=52.55
     command: >
       bash -c "
-        echo 'Setting up Valhalla configuration...'
+        echo 'Setting up Valhalla configuration for Berlin Mitte...'
         mkdir -p /valhalla_tiles
         if [ ! -f /valhalla_tiles/valhalla.json ]; then
-          echo 'Creating Valhalla config...'
+          echo 'Creating Valhalla config with BBox...'
           valhalla_build_config --mjolnir-tile-dir /valhalla_tiles --mjolnir-tile-extract /valhalla_tiles/extract.tar --mjolnir-timezone /valhalla_tiles/timezone.sqlite --mjolnir-admin /valhalla_tiles/admin.sqlite > /valhalla_tiles/valhalla.json
         fi
         if [ ! -f /valhalla_tiles/extract.tar ]; then
-          echo 'Building tiles from OSM data...'
+          echo 'Building tiles from OSM data with BBox filter...'
           valhalla_build_tiles -c /valhalla_tiles/valhalla.json /data/berlin.osm.pbf
           find /valhalla_tiles -name '*.gph' | tar cf /valhalla_tiles/extract.tar -T -
         fi
