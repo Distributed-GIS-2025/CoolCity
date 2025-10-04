@@ -1,5 +1,6 @@
 
 services:
+  
   frontend:
     build: ./frontend
     container_name: webapp
@@ -10,6 +11,19 @@ services:
       - /app/node_modules
     depends_on:
       - backend  
+
+  graphhopper:
+    image: israelhikingmap/graphhopper:10.2
+    ports:
+      - "8989:8989"
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx4g
+    volumes:
+      - ./osm:/osm:ro
+      - ./backend/data:/data
+      - ./backend/graphhopper-config.yml:/config.yml:ro
+    command: ["./graphhopper.sh", "web", "/config.yml"]
+    restart: unless-stopped
 
   backend:
     build: ./backend

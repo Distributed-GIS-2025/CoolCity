@@ -1,0 +1,16 @@
+graphhopper:
+  datareader.file: /osm/berlin.osm.pbf
+  graph.location: /data/graph-cache
+  custom_areas:
+    directory: /data/custom_areas
+
+profiles:
+  - name: foot
+    vehicle: foot
+    weighting: custom
+
+server:
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 0.0.0.0
