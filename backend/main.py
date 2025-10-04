@@ -1,3 +1,4 @@
+import httpx
 import os
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -8,9 +9,8 @@ import psycopg2
 import psycopg2.extras
 import json
 
-
-
 DB_DSN = os.getenv("DB_DSN", "dbname=osm_data user=postgres password=postgres host=db port=5432")
+VALHALLA_URL = os.getenv("VALHALLA_URL", "http://valhalla:8002")
 
 app = FastAPI()
 
@@ -45,8 +45,6 @@ def get_markers():
             FROM features
             ORDER BY id;
         """)
-        
-
         return list(cur.fetchall())
 
 @app.post("/features")
@@ -74,7 +72,6 @@ def reset_features():
         """)
         conn.commit()
     return {"status": "reset_done"}
-
 
 @app.delete("/features/{fid}")
 def delete_marker(fid: int):
@@ -126,3 +123,29 @@ def get_districts():
         {"name": r[0], "geometry": json.loads(r[1])}
         for r in rows
     ]
+
+# Valhalla routing service
+@app.get("/ping")
+async def ping():
+    return {"ok": True, "service": "backend"}
+
+@app.post("/api/route")
+async def route(body: dict):
+    """
+    Erwarte body:
+    {
+      "points": [[lon,lat],[lon,lat], ...],
+      "costing": "pedestrian" | "bicycle" | "auto" (optional)
+    }
+    """
+    pts = body.get("points", [])
+    if len(pts) < 2:
+        return {"error": "need at least two points [[lon,lat],[lon,lat]]"}
+
+    locations = [{"lat": lat, "lon": lon} for lon, lat in pts]  # lon/lat -> lat/lon
+    payload = {"locations": locations, "costing": body.get("costing", "pedestrian")}
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(f"{VALHALLA_URL}/route", json=payload)
+        r.raise_for_status()
+        return r.json()

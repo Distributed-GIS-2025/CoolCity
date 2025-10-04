@@ -12,17 +12,54 @@ services:
     depends_on:
       - backend  
 
-  graphhopper:
-    image: israelhikingmap/graphhopper:10.2
+  # valhalla (alte, fehlerhafte Konfiguration):
+  # valhalla:
+  #   #image: ghcr.io/valhalla/valhalla:scripted #notworking
+  #   #image: ghcr.io/gis-ops/docker-valhalla:latest #not working
+  #   image: ghcr.io/valhalla/valhalla-scripted:latest
+  #   container_name: valhalla
+  #   ports:
+  #     - "8002:8002"              # Valhalla API
+  #   volumes:
+  #     - ./osm:/data             # berlin.osm.pbf liegt hier
+  #   environment:
+  #     - build_tiles=true        # Tiles beim Start aus der PBF bauen
+  #     - use_tiles_ignore_pbf=false
+  #     - force_rebuild=false
+  #     # optional (beschleunigt Build auf Berlin-BBox):
+  #     # - min_x=13.0
+  #     # - min_y=52.3
+  #     # - max_x=13.8
+  #     # - max_y=52.7
+  #   restart: unless-stopped
+
+  # valhalla (funktionierende Konfiguration mit Standard-Image):
+  valhalla:
+    image: ghcr.io/valhalla/valhalla:latest
+    container_name: valhalla
     ports:
-      - "8989:8989"
-    environment:
-      JAVA_TOOL_OPTIONS: -Xmx4g
+      - "8002:8002"
     volumes:
-      - ./osm:/osm:ro
-      - ./backend/data:/data
-      - ./backend/graphhopper-config.yml:/config.yml:ro
-    command: ["./graphhopper.sh", "web", "/config.yml"]
+      - ./osm:/data
+      - valhalla_tiles:/valhalla_tiles
+    environment:
+      - VALHALLA_BUILD_TILES=true
+    command: >
+      bash -c "
+        echo 'Setting up Valhalla configuration...'
+        mkdir -p /valhalla_tiles
+        if [ ! -f /valhalla_tiles/valhalla.json ]; then
+          echo 'Creating Valhalla config...'
+          valhalla_build_config --mjolnir-tile-dir /valhalla_tiles --mjolnir-tile-extract /valhalla_tiles/extract.tar --mjolnir-timezone /valhalla_tiles/timezone.sqlite --mjolnir-admin /valhalla_tiles/admin.sqlite > /valhalla_tiles/valhalla.json
+        fi
+        if [ ! -f /valhalla_tiles/extract.tar ]; then
+          echo 'Building tiles from OSM data...'
+          valhalla_build_tiles -c /valhalla_tiles/valhalla.json /data/berlin.osm.pbf
+          find /valhalla_tiles -name '*.gph' | tar cf /valhalla_tiles/extract.tar -T -
+        fi
+        echo 'Starting Valhalla service...'
+        valhalla_service /valhalla_tiles/valhalla.json 1
+      "
     restart: unless-stopped
 
   backend:
@@ -31,7 +68,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      # - ./backend:/app  # Temporär entfernt für Routing-Test
       - ./backend/data:/data
     environment:
       DB_DSN: "dbname=osm_data user=postgres password=postgres host=db port=5432"
@@ -55,4 +92,5 @@ services:
 
 volumes:
   pgdata:
+  valhalla_tiles:
 
