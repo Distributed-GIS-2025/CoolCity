@@ -83,7 +83,7 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
 export default function App() {
   const [markers, setMarkers] = useState([]);
   const [newPosition, setNewPosition] = useState(null);
-  const [activeTypes, setActiveTypes] = useState(TYPES.map(t => t.value));
+  const [activeTypes, setActiveTypes] = useState([]); // Start with no features visible
   const [districts, setDistricts] = useState([]);
   
   // Routing State
@@ -91,6 +91,8 @@ export default function App() {
   const [routePoints, setRoutePoints] = useState([]);
   const [routeGeometry, setRouteGeometry] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
+  
+
 
   /* Filter */
   function toggleType(type) {
@@ -108,8 +110,14 @@ export default function App() {
       .then(setDistricts);
   }, []);
 
-  /* ---- Load ---- */
+  /* ---- Load Features (on-demand) ---- */
   useEffect(() => {
+    // Only load features if at least one type is active
+    if (activeTypes.length === 0) {
+      setMarkers([]);
+      return;
+    }
+    
     fetch("http://localhost:8000/features")
       .then((res) => res.json())
       .then((data) => {
@@ -124,7 +132,7 @@ export default function App() {
         setMarkers(casted);
       })
       .catch((e) => console.error("GET /features failed:", e));
-  }, []);
+  }, [activeTypes]);
 
   /* ---- Save ---- */
   function handleAdd(marker) {
@@ -392,6 +400,7 @@ export default function App() {
           routingMode={routingMode}
         />
 
+
         {/* Route Polyline */}
         {routeGeometry && (
           <>
@@ -432,13 +441,13 @@ export default function App() {
                 background:${color};
                 color:white;
                 border-radius:50%;
-                width:10px;
-                height:10px;
+                width:32px;
+                height:32px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
                 font-weight:bold;
-              "></div>`,
+              ">${cluster.getChildCount()}</div>`,
               className: "custom-cluster",
               iconSize: [32, 32],
             });
