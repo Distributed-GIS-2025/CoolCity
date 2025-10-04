@@ -6,9 +6,7 @@ services:
     container_name: webapp
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    # Volumes entfernt damit Container die aktuellen Dateien verwendet
     depends_on:
       - backend  
 

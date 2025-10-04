@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 psycopg2-binary   # später für PostgreSQL-Anbindung
 httpx             # für Valhalla API calls
+polyline          # für Route-Dekodierung
+shapely           # für Polygon-Operationen

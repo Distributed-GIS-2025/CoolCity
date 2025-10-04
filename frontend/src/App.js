@@ -1,5 +1,5 @@
 import { useState, useEffect} from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON, Polyline, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON, Polyline, Marker, Polygon } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -92,6 +92,18 @@ export default function App() {
   const [routeGeometry, setRouteGeometry] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
   
+  // Green Route State
+  const [greenRouteMode, setGreenRouteMode] = useState(false);
+  const [maxExtraMinutes, setMaxExtraMinutes] = useState(10);
+  const [greenRouteGeometry, setGreenRouteGeometry] = useState(null);
+  const [baseRouteGeometry, setBaseRouteGeometry] = useState(null);
+  
+  // Debug-Features
+  const [debugTrees, setDebugTrees] = useState([]);
+  const [debugParks, setDebugParks] = useState([]);
+  const [showDebugTrees, setShowDebugTrees] = useState(false);
+  const [showDebugParks, setShowDebugParks] = useState(false); // Basis-Route für Vergleich
+  
 
 
   /* Filter */
@@ -109,6 +121,43 @@ export default function App() {
       .then((res) => res.json())
       .then(setDistricts);
   }, []);
+
+  // Auto-load Debug Features
+  useEffect(() => {
+    // Automatisch Debug-Features beim Start laden UND anzeigen
+    loadDebugTrees();
+    loadDebugParks();
+    
+    // Nach 2 Sekunden automatisch anzeigen
+    setTimeout(() => {
+      setShowDebugTrees(true);
+      setShowDebugParks(true);
+    }, 2000);
+  }, []);
+
+  // Automatische Neuberechnung wenn Green Route Modus geändert wird
+  useEffect(() => {
+    console.log('useEffect triggered: greenRouteMode =', greenRouteMode, 'routePoints.length =', routePoints.length);
+    
+    if (routePoints.length >= 2) {
+      console.log('🔄 Green Route mode changed to:', greenRouteMode, '- Recalculating route...');
+      
+      if (greenRouteMode) {
+        // Wechsel zu Green Route
+        console.log('→ Switching to GREEN route');
+        calculateGreenRoute(routePoints);
+      } else {
+        // Wechsel zu normaler Route  
+        console.log('→ Switching to NORMAL route');
+        calculateRoute(routePoints);
+        // Lösche grüne Route-Daten
+        setGreenRouteGeometry(null);
+        setBaseRouteGeometry(null);
+      }
+    } else {
+      console.log('⚠️ Not enough route points for recalculation');
+    }
+  }, [greenRouteMode, routePoints]); // Abhängigkeiten: beide Werte
 
   /* ---- Load Features (on-demand) ---- */
   useEffect(() => {
@@ -168,14 +217,25 @@ export default function App() {
     console.log("Route point added:", position, "Total points:", newPoints.length);
     
     if (newPoints.length >= 2) {
-      calculateRoute(newPoints);
+      if (greenRouteMode) {
+        calculateGreenRoute(newPoints);
+      } else {
+        calculateRoute(newPoints);
+      }
     }
   }
   
   function calculateRoute(points) {
+    console.log('🛣️ Calculating NORMAL route with', points.length, 'points');
+    
+    // Lösche zuerst grüne Route-Daten
+    setGreenRouteGeometry(null);
+    setBaseRouteGeometry(null);
+    
     const payload = {
       points: points.map(p => [p.lng, p.lat]), // [lon, lat] für Backend
-      costing: 'pedestrian'
+      costing: 'pedestrian',
+      alternatives: 3  // Berechne bis zu 3 alternative Routen
     };
     
     fetch("http://localhost:8000/api/route", {
@@ -207,10 +267,104 @@ export default function App() {
       alert("Routing failed: " + e.message);
     });
   }
+
+  // Debug-Funktionen
+  function loadDebugTrees() {
+    fetch("http://localhost:8000/debug/trees")
+      .then(res => res.json())
+      .then(data => {
+        console.log("Trees debug data:", data);
+        if (data.features) {
+          setDebugTrees(data.features);
+          setShowDebugTrees(true);
+        }
+      })
+      .catch(err => console.error("Fehler beim Laden der Bäume:", err));
+  }
+
+  function loadDebugParks() {
+    fetch("http://localhost:8000/debug/parks")
+      .then(res => res.json())
+      .then(data => {
+        console.log("Parks debug data:", data);
+        if (data.features) {
+          setDebugParks(data.features);
+          setShowDebugParks(true);
+        }
+      })
+      .catch(err => console.error("Fehler beim Laden der Parks:", err));
+  }
+
+  function calculateGreenRoute(points) {
+    console.log('🌳 Calculating GREEN route with', points.length, 'points');
+    
+    // Lösche zuerst normale Route-Daten
+    setRouteGeometry(null);
+    
+    const payload = {
+      points: points.map(p => [p.lng, p.lat]),
+      max_extra_minutes: maxExtraMinutes,
+      prefer_parks: true,
+      prefer_trees: true
+    };
+    
+    fetch("http://localhost:8000/api/green-route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("🌳 Green route response:", data);
+      
+      if (data.success && data.green_route) {
+        console.log("✅ Green route calculation successful!");
+        
+        // Speichere beide Routen für Vergleich
+        const greenLeg = data.green_route.trip.legs[0];
+        const baseLeg = data.base_route.trip.legs[0];
+        
+        const greenCoords = decodePolyline(greenLeg.shape);
+        const baseCoords = decodePolyline(baseLeg.shape);
+        
+        console.log("🌳 Setting greenRouteGeometry:", greenCoords.length, "points");
+        console.log("🔵 Setting baseRouteGeometry:", baseCoords.length, "points");
+        
+        setGreenRouteGeometry(greenCoords);
+        setBaseRouteGeometry(baseCoords);
+        setRouteInfo({
+          distance: greenLeg.summary.length.toFixed(2),
+          time: Math.round(greenLeg.summary.time / 60),
+          unit: greenLeg.summary.units || 'km',
+          extraTime: data.extra_time.toFixed(1),
+          type: 'green'
+        });
+      } else {
+        console.log("❌ Green route FAILED:", data.message);
+        console.log("❌ Response data:", data);
+        
+        // Fallback zur normalen Route, aber Green Mode beibehalten
+        calculateRoute(points);
+        
+        // Zeige Benutzer-freundliche Nachricht  
+        if (data.message && data.message.includes('länger dauern')) {
+          console.warn("💡 Tipp: Erhöhe das 'Max extra time' Limit für grüne Routen!");
+          console.log(`⚠️ Grüne Route zu lang! ${data.message}`);
+        }
+      }
+    })
+    .catch(e => {
+      console.error("❌ Green routing API ERROR:", e);
+      // Fallback zur normalen Route bei API-Fehlern
+      calculateRoute(points);
+    });
+  }
   
   function clearRoute() {
     setRoutePoints([]);
     setRouteGeometry(null);
+    setGreenRouteGeometry(null);
+    setBaseRouteGeometry(null);
     setRouteInfo(null);
   }
   
@@ -324,6 +478,119 @@ export default function App() {
             <div style={{ fontSize: "12px", color: "#666", marginBottom: 4 }}>
               Click on map to add route points
             </div>
+            
+
+
+            {/* Debug Info */}
+            <div style={{ 
+              fontSize: "12px", 
+              color: "red", 
+              backgroundColor: "yellow", 
+              padding: "4px", 
+              marginBottom: 4,
+              border: "2px solid red"
+            }}>
+              🔍 DEBUG: Mode={greenRouteMode ? 'GREEN' : 'NORMAL'} | 
+              Routes: normal={routeGeometry ? 'YES' : 'NO'}, green={greenRouteGeometry ? 'YES' : 'NO'}
+            </div>
+
+            {/* Green Route Toggle */}
+            <label style={{ fontSize: "12px", display: "flex", alignItems: "center", marginBottom: 4 }}>
+              <input 
+                type="checkbox" 
+                checked={greenRouteMode}
+                onChange={(e) => {
+                  const newMode = e.target.checked;
+                  console.log('🔄 GREEN ROUTE CHECKBOX CLICKED! New mode:', newMode);
+                  console.log('🔄 Current routePoints:', routePoints.length);
+                  setGreenRouteMode(newMode);
+                  
+                  // Direkte Neuberechnung wenn Route existiert
+                  if (routePoints.length >= 2) {
+                    console.log('→ Immediate recalculation with', routePoints.length, 'points');
+                    
+                    if (newMode) {
+                      console.log('→ Calculating GREEN route');
+                      // Lösche erst die normale Route
+                      setRouteGeometry(null);
+                      calculateGreenRoute(routePoints);
+                    } else {
+                      console.log('→ Calculating NORMAL route'); 
+                      // Lösche erst grüne Route-Daten
+                      setGreenRouteGeometry(null);
+                      setBaseRouteGeometry(null);
+                      calculateRoute(routePoints);
+                    }
+                  } else {
+                    console.log('⚠️ No route points - skipping recalculation');
+                  }
+                }}
+                style={{ marginRight: 4 }}
+              />
+              🌳 GREEN ROUTE TEST - UPDATED! (through parks & trees)
+              {routePoints.length >= 2 && (
+                <span style={{ fontSize: "10px", color: "#666", marginLeft: 8 }}>
+                  (Auto-recalculates)
+                </span>
+              )}
+            </label>
+            
+            {/* Max Extra Time Slider */}
+            {greenRouteMode && (
+              <div style={{ fontSize: "11px", marginBottom: 4 }}>
+                <label>Max extra time: {maxExtraMinutes} min</label>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="15" 
+                  value={maxExtraMinutes}
+                  onChange={(e) => setMaxExtraMinutes(parseInt(e.target.value))}
+                  style={{ width: "100%", marginTop: 2 }}
+                />
+              </div>
+            )}
+            
+            {/* Debug Controls */}
+            <div style={{ marginTop: 8, padding: "4px 0", borderTop: "1px solid #ddd" }}>
+              <div style={{ fontSize: "10px", color: "#666", marginBottom: 4 }}>Debug Features:</div>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                <button 
+                  onClick={loadDebugTrees}
+                  style={{ fontSize: "9px", padding: "2px 4px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 2 }}
+                >
+                  Load Trees ({debugTrees.length})
+                </button>
+                <label style={{ fontSize: "9px", display: "flex", alignItems: "center" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={showDebugTrees}
+                    onChange={(e) => setShowDebugTrees(e.target.checked)}
+                    style={{ marginRight: 2, transform: "scale(0.8)" }}
+                  />
+                  Show
+                </label>
+              </div>
+              
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <button 
+                  onClick={loadDebugParks}
+                  style={{ fontSize: "9px", padding: "2px 4px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: 2 }}
+                >
+                  Load Parks ({debugParks.length})
+                </button>
+                <label style={{ fontSize: "9px", display: "flex", alignItems: "center" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={showDebugParks}
+                    onChange={(e) => setShowDebugParks(e.target.checked)}
+                    style={{ marginRight: 2, transform: "scale(0.8)" }}
+                  />
+                  Show
+                </label>
+              </div>
+            </div>
+            
             {routePoints.length > 0 && (
               <button
                 onClick={clearRoute}
@@ -341,16 +608,19 @@ export default function App() {
                 Clear Route ({routePoints.length} points)
               </button>
             )}
+            
+            {/* Route Info */}
             {routeInfo && (
               <div style={{ 
-                fontSize: "12px", 
-                background: "#e9ecef", 
-                padding: 4, 
+                fontSize: "11px", 
+                background: routeInfo.type === 'green' ? "#d4edda" : "#e9ecef", 
+                padding: "4px 6px", 
                 borderRadius: 4,
-                marginBottom: 4
+                marginTop: 4 
               }}>
-                📍 {routeInfo.distance} {routeInfo.unit}<br/>
-                ⏱️ {routeInfo.time} min
+                <div>📏 {routeInfo.distance} {routeInfo.unit}</div>
+                <div>⏱️ {routeInfo.time} min{routeInfo.extraTime ? ` (+${routeInfo.extraTime} min)` : ''}</div>
+                {routeInfo.type === 'green' && <div>🌳 Green route through parks!</div>}
               </div>
             )}
           </>
@@ -401,10 +671,10 @@ export default function App() {
         />
 
 
-        {/* Route Polyline */}
-        {routeGeometry && (
+        {/* Route Polylines */}
+        {routeGeometry && !greenRouteMode && (
           <>
-            {console.log("Rendering Polyline with geometry:", routeGeometry)}
+            {console.log("Rendering normal route:", routeGeometry)}
             <Polyline
               positions={routeGeometry}
               color="#007bff"
@@ -413,6 +683,122 @@ export default function App() {
             />
           </>
         )}
+        
+        {/* Base Route (grau, durchsichtig) bei Green Route */}
+        {baseRouteGeometry && greenRouteMode && (
+          <>
+            {console.log("Rendering base route (comparison):", baseRouteGeometry)}
+            <Polyline
+              positions={baseRouteGeometry}
+              color="#6c757d"
+              weight={3}
+              opacity={0.4}
+              dashArray="5, 10"
+            />
+          </>
+        )}
+        
+        {/* Green Route Polyline */}
+        {greenRouteGeometry && greenRouteMode && (
+          <>
+            {console.log("🌳 RENDERING green route with", greenRouteGeometry.length, "points, greenRouteMode:", greenRouteMode)}
+            <Polyline
+              positions={greenRouteGeometry}
+              color="#28a745"
+              weight={5}
+              opacity={0.9}
+            />
+          </>
+        )}
+        
+        {/* Debug: Log wenn grüne Route nicht angezeigt wird */}
+        {greenRouteMode && !greenRouteGeometry && console.log("⚠️ Green route mode active but no greenRouteGeometry!")}
+        {!greenRouteMode && greenRouteGeometry && console.log("ℹ️ Green route data exists but mode is off")}
+
+        {/* Debug Trees - Support für MultiPolygon */}
+        {showDebugTrees && debugTrees.map((tree, index) => {
+          if (tree.geometry) {
+            let polygonCoordinates = [];
+            
+            if (tree.geometry.type === 'Polygon') {
+              polygonCoordinates = [tree.geometry.coordinates[0]];
+            } else if (tree.geometry.type === 'MultiPolygon') {
+              // MultiPolygon: nimm das erste Polygon
+              polygonCoordinates = [tree.geometry.coordinates[0][0]];
+            }
+            
+            if (polygonCoordinates.length > 0) {
+              // Koordinaten: GeoJSON ist [lng, lat], Leaflet braucht [lat, lng]
+              const coords = polygonCoordinates[0].map(coord => [coord[1], coord[0]]);
+              
+              // Debug: Zeige erste Koordinate in Konsole
+              if (index === 0) {
+                console.log(`Tree ${index}:`, tree.geometry.type, 'coords:', coords[0]);
+              }
+              
+              return (
+                <Polygon
+                  key={`tree-${index}`}
+                  positions={coords}
+                  color="#FF0000"  
+                  fillColor="#00FF00"
+                  fillOpacity={0.9}  
+                  weight={4}  
+                >
+                  <Popup>
+                    🌳 Baum #{index + 1}<br/>
+                    Type: {tree.geometry.type}<br/>
+                    Lat: {coords[0]?.[0]?.toFixed(6)}<br/>
+                    Lng: {coords[0]?.[1]?.toFixed(6)}
+                  </Popup>
+                </Polygon>
+              );
+            }
+          }
+          return null;
+        })}
+
+        {/* Debug Parks - Support für MultiPolygon */}
+        {showDebugParks && debugParks.map((park, index) => {
+          if (park.geometry) {
+            let polygonCoordinates = [];
+            
+            if (park.geometry.type === 'Polygon') {
+              polygonCoordinates = [park.geometry.coordinates[0]];
+            } else if (park.geometry.type === 'MultiPolygon') {
+              // MultiPolygon: nimm das erste Polygon
+              polygonCoordinates = [park.geometry.coordinates[0][0]];
+            }
+            
+            if (polygonCoordinates.length > 0) {
+              const coords = polygonCoordinates[0].map(coord => [coord[1], coord[0]]);
+              
+              // Debug: Zeige erste Park-Koordinate in Konsole  
+              if (index === 0) {
+                console.log(`Park ${index}:`, park.geometry.type, 'coords:', coords[0]);
+              }
+              
+              return (
+                <Polygon
+                  key={`park-${index}`}
+                  positions={coords}
+                  color="#0000FF"  
+                  fillColor="#ADD8E6"  
+                  fillOpacity={0.8}  
+                  weight={5}  
+                >
+                  <Popup>
+                    🏞️ Park #{index + 1}<br/>
+                    Type: {park.geometry.type}<br/>
+                    Lat: {coords[0]?.[0]?.toFixed(6)}<br/>
+                    Lng: {coords[0]?.[1]?.toFixed(6)}
+                  </Popup>
+                </Polygon>
+              );
+            }
+          }
+          return null;
+        })}
 
         {/* Route Points */}
         {routePoints.map((point, index) => (
