@@ -49,6 +49,11 @@ services:
       - max_y=52.55
     command: >
       bash -c "
+        echo 'Checking for berlin.osm.pbf...'
+        if [ ! -f /data/berlin.osm.pbf ]; then
+          echo 'Downloading Berlin OSM extract...'
+          wget -O /data/berlin.osm.pbf https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+        fi
         echo 'Setting up Valhalla configuration for Berlin Mitte...'
         mkdir -p /valhalla_tiles
         if [ ! -f /valhalla_tiles/valhalla.json ]; then
