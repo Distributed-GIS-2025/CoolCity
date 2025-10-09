@@ -44,8 +44,8 @@ async def get_trees_debug():
     try:
         with open(trees_file, 'r') as f:
             trees_data = json.load(f)
-        
-        features = trees_data.get("features", [])[:200]  # Mehr Bäume laden  
+
+        features = trees_data.get("features", [])  # Alle Bäume laden
         return {
             "type": "FeatureCollection",
             "features": features,
@@ -66,8 +66,8 @@ async def get_parks_debug():
     try:
         with open(parks_file, 'r') as f:
             parks_data = json.load(f)
-            
-        features = parks_data.get("features", [])[:100]  # Mehr Parks laden
+
+        features = parks_data.get("features", [])  # Alle Parks laden
         return {
             "type": "FeatureCollection", 
             "features": features,
