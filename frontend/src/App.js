@@ -719,37 +719,40 @@ export default function App() {
         {showDebugTrees && debugTrees.map((tree, index) => {
           if (tree.geometry) {
             let polygonCoordinates = [];
-            
+
             if (tree.geometry.type === 'Polygon') {
-              polygonCoordinates = [tree.geometry.coordinates[0]];
+              // keep all rings (outer + holes)
+              polygonCoordinates = tree.geometry.coordinates;
             } else if (tree.geometry.type === 'MultiPolygon') {
-              // MultiPolygon: nimm das erste Polygon
-              polygonCoordinates = [tree.geometry.coordinates[0][0]];
+              // MultiPolygon: use first polygon, keep all its rings
+              polygonCoordinates = tree.geometry.coordinates[0];
             }
-            
+
             if (polygonCoordinates.length > 0) {
-              // Koordinaten: GeoJSON ist [lng, lat], Leaflet braucht [lat, lng]
-              const coords = polygonCoordinates[0].map(coord => [coord[1], coord[0]]);
-              
-              // Debug: Zeige erste Koordinate in Konsole
+              // GeoJSON is [lng, lat], Leaflet needs [lat, lng]
+              const coords = polygonCoordinates.map(ring =>
+                ring.map(coord => [coord[1], coord[0]])
+              );
+
+              // Debug: show first coordinate in console
               if (index === 0) {
-                console.log(`Tree ${index}:`, tree.geometry.type, 'coords:', coords[0]);
+                console.log(`Tree ${index}:`, tree.geometry.type, 'coords:', coords[0][0]);
               }
-              
+
               return (
                 <Polygon
                   key={`tree-${index}`}
                   positions={coords}
-                  color="#FF0000"  
+                  color="#FF0000"
                   fillColor="#00FF00"
-                  fillOpacity={0.9}  
-                  weight={4}  
+                  fillOpacity={0.9}
+                  weight={4}
                 >
                   <Popup>
                     🌳 Baum #{index + 1}<br/>
                     Type: {tree.geometry.type}<br/>
-                    Lat: {coords[0]?.[0]?.toFixed(6)}<br/>
-                    Lng: {coords[0]?.[1]?.toFixed(6)}
+                    Lat: {coords[0]?.[0]?.[0]?.toFixed(6)}<br/>
+                    Lng: {coords[0]?.[0]?.[1]?.toFixed(6)}
                   </Popup>
                 </Polygon>
               );
@@ -758,47 +761,53 @@ export default function App() {
           return null;
         })}
 
-        {/* Debug Parks - Support für MultiPolygon */}
-        {showDebugParks && debugParks.map((park, index) => {
-          if (park.geometry) {
-            let polygonCoordinates = [];
-            
-            if (park.geometry.type === 'Polygon') {
-              polygonCoordinates = [park.geometry.coordinates[0]];
-            } else if (park.geometry.type === 'MultiPolygon') {
-              // MultiPolygon: nimm das erste Polygon
-              polygonCoordinates = [park.geometry.coordinates[0][0]];
-            }
-            
-            if (polygonCoordinates.length > 0) {
-              const coords = polygonCoordinates[0].map(coord => [coord[1], coord[0]]);
-              
-              // Debug: Zeige erste Park-Koordinate in Konsole  
-              if (index === 0) {
-                console.log(`Park ${index}:`, park.geometry.type, 'coords:', coords[0]);
-              }
-              
-              return (
-                <Polygon
-                  key={`park-${index}`}
-                  positions={coords}
-                  color="#0000FF"  
-                  fillColor="#ADD8E6"  
-                  fillOpacity={0.8}  
-                  weight={5}  
-                >
-                  <Popup>
-                    🏞️ Park #{index + 1}<br/>
-                    Type: {park.geometry.type}<br/>
-                    Lat: {coords[0]?.[0]?.toFixed(6)}<br/>
-                    Lng: {coords[0]?.[1]?.toFixed(6)}
-                  </Popup>
-                </Polygon>
-              );
-            }
-          }
-          return null;
-        })}
+
+       {/* Debug Parks - Support für MultiPolygon */}
+{showDebugParks && debugParks.map((park, index) => {
+  if (park.geometry) {
+    let polygonCoordinates = [];
+
+    if (park.geometry.type === 'Polygon') {
+      // keep all rings (outer + holes)
+      polygonCoordinates = park.geometry.coordinates;
+    } else if (park.geometry.type === 'MultiPolygon') {
+      // MultiPolygon: use first polygon, keep all its rings
+      polygonCoordinates = park.geometry.coordinates[0];
+    }
+
+    if (polygonCoordinates.length > 0) {
+      // GeoJSON is [lng, lat], Leaflet needs [lat, lng]
+      const coords = polygonCoordinates.map(ring =>
+        ring.map(coord => [coord[1], coord[0]])
+      );
+
+      // Debug: show first coordinate in console
+      if (index === 0) {
+        console.log(`Park ${index}:`, park.geometry.type, 'coords:', coords[0][0]);
+      }
+
+      return (
+        <Polygon
+          key={`park-${index}`}
+          positions={coords}
+          color="#0000FF"
+          fillColor="#ADD8E6"
+          fillOpacity={0.8}
+          weight={5}
+        >
+          <Popup>
+            🏞️ Park #{index + 1}<br/>
+            Type: {park.geometry.type}<br/>
+            Lat: {coords[0]?.[0]?.[0]?.toFixed(6)}<br/>
+            Lng: {coords[0]?.[0]?.[1]?.toFixed(6)}
+          </Popup>
+        </Polygon>
+      );
+    }
+  }
+  return null;
+})}
+
 
         {/* Route Points */}
         {routePoints.map((point, index) => (
