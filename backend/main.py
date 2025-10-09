@@ -294,7 +294,7 @@ async def green_route(body: dict):
                     "use_footway": 1.0,         # Fußwege maximal nutzen  
                     "use_living_streets": 0.8,  # Wohnstraßen mehr nutzen
                     "use_sidewalk": 0.9,        # Gehwege bevorzugen
-                    "walking_speed": 3.8,       # Langsamere Geschwindigkeit
+                    "walking_speed": 5.1,       # Langsamere Geschwindigkeit
                     "step_penalty": 0,
                     "max_hiking_difficulty": 6,
                     "walkway_factor": 1.8,      # Gehwege bevorzugen
