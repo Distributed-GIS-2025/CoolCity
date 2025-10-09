@@ -76,8 +76,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # - ./backend:/app  # Temporär entfernt für Routing-Test
-      - ./backend/data:/data
+      - ./backend:/app  # Live-Reload für Entwicklung
+      - ./backend/data:/app/data
     environment:
       DB_DSN: "dbname=osm_data user=postgres password=postgres host=db port=5432"
     depends_on:

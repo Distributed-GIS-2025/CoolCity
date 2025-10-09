@@ -36,7 +36,7 @@ async def debug_test():
 async def get_trees_debug():
     """Debug: Lade Baum-Features"""
     import os
-    trees_file = "/data/custom_areas/trees_buffer_mitte.geojson"
+    trees_file = "/app/data/custom_areas/trees_buffer_mitte.geojson"
     
     if not os.path.exists(trees_file):
         return {"error": f"Datei nicht gefunden: {trees_file}"}
@@ -45,11 +45,12 @@ async def get_trees_debug():
         with open(trees_file, 'r') as f:
             trees_data = json.load(f)
         
-        features = trees_data.get("features", [])[:200]  # Mehr Bäume laden  
+        features = trees_data.get("features", [])  # ALLE Bäume laden
         return {
             "type": "FeatureCollection",
             "features": features,
-            "total_features": len(trees_data.get("features", []))
+            "total_features": len(trees_data.get("features", [])),
+            "loaded_features": len(features)
         }
     except Exception as e:
         return {"error": str(e)}
@@ -58,7 +59,7 @@ async def get_trees_debug():
 async def get_parks_debug():
     """Debug: Lade Park-Features"""
     import os
-    parks_file = "/data/custom_areas/parks_buffer_mitte.geojson"
+    parks_file = "/app/data/custom_areas/parks_buffer_mitte.geojson"
     
     if not os.path.exists(parks_file):
         return {"error": f"Datei nicht gefunden: {parks_file}"}
@@ -67,11 +68,12 @@ async def get_parks_debug():
         with open(parks_file, 'r') as f:
             parks_data = json.load(f)
             
-        features = parks_data.get("features", [])[:100]  # Mehr Parks laden
+        features = parks_data.get("features", [])  # ALLE Parks laden
         return {
             "type": "FeatureCollection", 
             "features": features,
-            "total_features": len(parks_data.get("features", []))
+            "total_features": len(parks_data.get("features", [])),
+            "loaded_features": len(features)
         }
     except Exception as e:
         return {"error": str(e)}
@@ -262,10 +264,22 @@ async def green_route(body: dict):
     
     locations = [{"lat": lat, "lon": lon} for lon, lat in pts]
     
-    # Erst normale Route berechnen als Referenz
+    # Erst normale Route berechnen als Referenz  
+    # WICHTIG: Gleiche costing_options wie grüne Route für faire Vergleiche
     base_payload = {
         "locations": locations, 
         "costing": "pedestrian",
+        "costing_options": {
+            "pedestrian": {
+                "walking_speed": 5.1,      # Standard Gehgeschwindigkeit (nur für Zeitschätzung)
+                "step_penalty": 0,         # Keine Strafe für Treppen/Stufen
+                "max_hiking_difficulty": 6,
+                "use_ferry": 0.0,          # Keine Fähren
+                "use_living_streets": 1.0, # Wohnstraßen bevorzugen
+                "use_tracks": 0.5,         # Feldwege teilweise erlauben
+                "shortest": True   
+            }
+        },
         "directions_options": {"units": "kilometers"}
     }
     
@@ -281,26 +295,21 @@ async def green_route(body: dict):
         # Lade grüne Gebiete aus GeoJSON-Dateien
         green_polygons = load_green_polygons(prefer_parks, prefer_trees)
         
-        # Ansatz: Mehrere Routen-Alternativen generieren und die "grünste" wählen
+        # Grüne Route: Nur minimale Änderungen für Parks/Bäume-Bevorzugung
+        # WICHTIG: Gleiche Basis-Parameter wie normale Route
         green_payload = {
             "locations": locations,
-            "costing": "pedestrian",
-            "alternates": 3,  # Generiere 3 alternative Routen
+            "costing": "pedestrian", 
+            # "alternates": 5,  # Mehr Alternativen für bessere Auswahl
             "costing_options": {
                 "pedestrian": {
-                    "shortest": False,
-                    "use_roads": 0.2,           # Straßen reduziert nutzen
-                    "use_tracks": 1.0,          # Waldwege maximal nutzen
-                    "use_footway": 1.0,         # Fußwege maximal nutzen  
-                    "use_living_streets": 0.8,  # Wohnstraßen mehr nutzen
-                    "use_sidewalk": 0.9,        # Gehwege bevorzugen
-                    "walking_speed": 3.8,       # Langsamere Geschwindigkeit
-                    "step_penalty": 0,
-                    "max_hiking_difficulty": 6,
-                    "walkway_factor": 1.8,      # Gehwege bevorzugen
-                    "sidewalk_factor": 1.4,     # Gehsteige bevorzugen
-                    "alley_factor": 0.9,        # Gassen erlauben
-                    "driveway_factor": 0.7      # Zufahrten weniger nutzen
+                "walking_speed": 5.1,      # Standard Gehgeschwindigkeit (nur für Zeitschätzung)
+                "step_penalty": 0,         # Keine Strafe für Treppen/Stufen
+                "max_hiking_difficulty": 6,
+                "use_ferry": 0.0,          # Keine Fähren
+                "use_living_streets": 1.0, # Wohnstraßen bevorzugen
+                "use_tracks": 0.5,         # Feldwege teilweise erlauben
+                "shortest": True   
                 }
             },
             "directions_options": {
@@ -348,29 +357,81 @@ def load_green_polygons(prefer_parks=True, prefer_trees=True):
     """Lade grüne Gebiete als Valhalla-kompatible Polygone."""
     polygons = []
     
+    print(f"🔍 load_green_polygons called with prefer_parks={prefer_parks}, prefer_trees={prefer_trees}")
+    
     try:
         if prefer_parks:
-            parks_file = "/data/custom_areas/parks_buffer_mitte.geojson"
+            parks_file = "/app/data/custom_areas/parks_buffer_mitte.geojson"
+            print(f"Trying to load parks from: {parks_file}")
+            
+            # Prüfen ob Datei existiert
+            import os
+            if not os.path.exists(parks_file):
+                print(f"ERROR: Parks file does not exist: {parks_file}")
+                print(f"Available files in /app/data/: {os.listdir('/app/data/')}")
+                if os.path.exists("/app/data/custom_areas/"):
+                    print(f"Available files in /app/data/custom_areas/: {os.listdir('/app/data/custom_areas/')}")
+            else:
+                print(f"Parks file exists: {parks_file}")
+            
             with open(parks_file, 'r') as f:
                 parks_data = json.load(f)
+                print(f"Parks JSON loaded successfully")
+                print(f"Parks data keys: {list(parks_data.keys())}")
+                print(f"Parks features type: {type(parks_data.get('features'))}")
+                print(f"Parks features length: {len(parks_data.get('features', []))}")
+                
+                if len(parks_data.get('features', [])) > 0:
+                    print(f"First feature sample: {parks_data['features'][0]}")
+                else:
+                    print("No features found in parks data!")
+                
                 for feature in parks_data.get('features', []):
-                    if feature.get('geometry', {}).get('type') == 'Polygon':
-                        # Valhalla erwartet [lng, lat] Koordinaten
-                        coords = feature['geometry']['coordinates'][0]
-                        # Konvertiere zu Valhalla Format: Liste von {"lat": x, "lon": y}
+                    geometry = feature.get('geometry', {})
+                    geom_type = geometry.get('type')
+                    print(f"Processing park feature with geometry type: {geom_type}")
+                    
+                    if geom_type == 'Polygon':
+                        # Einzelnes Polygon
+                        coords = geometry['coordinates'][0]
                         valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
                         polygons.append(valhalla_coords)
+                        print(f"Added Polygon with {len(coords)} points")
+                    elif geom_type == 'MultiPolygon':
+                        # MultiPolygon: Alle Teil-Polygone hinzufügen
+                        for i, polygon_coords in enumerate(geometry['coordinates']):
+                            coords = polygon_coords[0]  # Äußerer Ring
+                            valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
+                            polygons.append(valhalla_coords)
+                            print(f"Added MultiPolygon part {i+1} with {len(coords)} points")
+                    else:
+                        print(f"Skipped feature with unknown geometry type: {geom_type}")
                 print(f"Parks geladen: {len(parks_data.get('features', []))} Features")
                 
         if prefer_trees:
-            trees_file = "/data/custom_areas/trees_buffer_mitte.geojson"
+            trees_file = "/app/data/custom_areas/trees_buffer_mitte.geojson"
             with open(trees_file, 'r') as f:
                 trees_data = json.load(f)
                 for feature in trees_data.get('features', []):
-                    if feature.get('geometry', {}).get('type') == 'Polygon':
-                        coords = feature['geometry']['coordinates'][0]
+                    geometry = feature.get('geometry', {})
+                    geom_type = geometry.get('type')
+                    print(f"Processing tree feature with geometry type: {geom_type}")
+                    
+                    if geom_type == 'Polygon':
+                        # Einzelnes Polygon
+                        coords = geometry['coordinates'][0]
                         valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
                         polygons.append(valhalla_coords)
+                        print(f"Added Polygon with {len(coords)} points")
+                    elif geom_type == 'MultiPolygon':
+                        # MultiPolygon: Alle Teil-Polygone hinzufügen
+                        for i, polygon_coords in enumerate(geometry['coordinates']):
+                            coords = polygon_coords[0]  # Äußerer Ring
+                            valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
+                            polygons.append(valhalla_coords)
+                            print(f"Added MultiPolygon part {i+1} with {len(coords)} points")
+                    else:
+                        print(f"Skipped feature with unknown geometry type: {geom_type}")
                 print(f"Trees geladen: {len(trees_data.get('features', []))} Features")
                 
     except Exception as e:
