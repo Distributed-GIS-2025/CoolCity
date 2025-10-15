@@ -285,7 +285,7 @@ async def green_route(body: dict):
         green_payload = {
             "locations": locations,
             "costing": "pedestrian",
-            "alternates": 3,  # Generiere 3 alternative Routen
+            "alternates": 10,  # Generiere 3 alternative Routen
             "costing_options": {
                 "pedestrian": {
                     "shortest": False,

@@ -842,7 +842,8 @@ export default function App() {
                 align-items:center;
                 justify-content:center;
                 font-weight:bold;
-              ">${cluster.getChildCount()}</div>`,
+                
+              "></div>`,
               className: "custom-cluster",
               iconSize: [32, 32],
             });
@@ -860,6 +861,7 @@ export default function App() {
                   color: "white",
                   weight: 1,
                   fillOpacity: 1,
+
                 }}
               >
                 <Popup>

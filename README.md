@@ -1,24 +1,87 @@
-# OSM Webapp (React + FastAPI + PostGIS)
+CoolCity Berlin
 
-## Voraussetzungen
-- Docker Desktop, Git
-- OSM-Extrakt (z. B. Berlin) als `.pbf`
 
-## Start (lokal)
-```bash
-git clone https://github.com/DEINUSER/REPO.git
-cd REPO
+Project Overview:
 
-# OSM-Datei besorgen (z. B. berlin-latest.osm.pbf) und ablegen als:
-#   ./osm/berlin.osm.pbf
+This web application provides interactive routing and geospatial analysis for OpenStreetMap data, using a React frontend, FastAPI backend, and PostGIS database. Routing is powered by Valhalla. 
+The app visualizes features such as benches and water fountains for Berlin-Mitte, for the user to find a cool place for a break when visiting Berlin Mitte. Also the user is able to delete features if recognized that the features have been removed. Furthermore the user can also add new features if new owns appear in the city. The changes will be stored in the database immediately and will influence other users.
+The routing is intended to show how to get from point A to point B and additionally when clicking on "green route" it shows the greenest route, with the most trees and parks within it to ensure more shadowing.
 
+
+Prerequisites:
+
+Docker Desktop (Windows, Mac, or Linux)
+Git
+
+
+Quick Start:
+git clone https://github.com/SOPHIEfree/osm-project.git
+cd osm-project
 docker compose up -d --build
 
-# warten bis die DB "ready to accept connections" loggt:
-#   docker compose logs -f db
 
-# OSM nach PostGIS importieren:
-docker compose run --rm osm2pgsql
+Services:
 
-# Drinking fountain aus OSM in features übernehmen:
-docker compose exec db psql -U postgres -d osm_data -f /docker-entrypoint-initdb.d/003_osm_import.sql
+Frontend: React app (port 3000)
+- accessible at http://localhost:3000
+Backend: FastAPI (port 8000)
+- API endpoints for routing and geodata
+Valhalla: Routing engine (port 8002)
+- used for route calculation
+
+
+Folder Structure:
+
+frontend: React source code
+backend: FastAPI backend, including routing logic and a data folder
+db: Database initialization scripts
+docker-compose.yml: Service orchestration
+
+
+Usage:
+
+1. Clone the repository and start all services with Docker Compose (see above).
+2. Open your browser at http://localhost:3000 to use the webapp.
+3. The backend API is available at http://localhost:8000.
+4. Valhalla routing API is available at http://localhost:8002.
+
+
+Data:
+
+GeoJSON buffer for Berlin-Mitte is located in data. It was used to query for the features contained in Mitte.
+GeoJSON of parks and trees are in custom_areas and have been used for valhalla for the green route calculation.
+GEoJSON with the features is also located in data and used as the input for the database. The database only contains the features and the boundary of Berlin-Mitte.
+
+
+API Endpoints (Backend):
+
+/api/route: Standard routing
+/api/green-route: Green routing (environmental criteria)
+
+
+Troubleshooting:
+
+If you encounter issues, ensure Docker Desktop is running and ports 3000, 8000 and 8002 are free.
+For backend errors, check logs with docker compose logs backend.
+For frontend errors, check logs with docker compose logs frontend.
+
+
+Notes:
+
+No authentication required for basic usage. As a next step for this website development the user should be able to log in, so individual routes can be saved, and new features can be added (favorite shop, etc.).
+All data is local; no external API keys needed.
+For the routing it has to be noticed, that the calculation of the green route should, as a next step, be improved, as for some cases it prioritizes trees over parks, which shouldn't lead to the greenest route. 
+
+Sources:
+
+The GeoJSON of the features was created by downloading the features data of https://github.com/technologiestiftung/erfrischungskarte-frontend/ and only querying for the features we needed in Berlin-Mitte.
+The data of the trees and parks originate from openstreetmap. A buffer was created around those featured in QGIS in order for valhalla to use it properly for the green route.
+The Berlin-Mitte boundary was obtained from Overpass Turbo.
+
+
+Credits:
+
+Built with React, FastAPI, PostGIS, and Valhalla.
+
+
+
