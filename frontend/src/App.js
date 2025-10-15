@@ -109,6 +109,7 @@ export default function App() {
   const [debugParks, setDebugParks] = useState([]);
   const [showDebugTrees, setShowDebugTrees] = useState(false);
   const [showDebugParks, setShowDebugParks] = useState(false); // Base route for comparison
+  const [headerZoomed, setHeaderZoomed] = useState(false);
   
 
 
@@ -462,9 +463,35 @@ export default function App() {
         alignItems: 'center',
         gap: 10
       }}>
-  <img src="/header.png" alt="CoolCity" style={{height:36, width:'auto', borderRadius:6}} />
+        <img
+          src="/header.png"
+          alt="CoolCity"
+          role="button"
+          onClick={() => setHeaderZoomed(true)}
+          style={{height:36, width:'auto', borderRadius:6, cursor: 'pointer', transition: 'transform 180ms ease'}}
+        />
         <span>CoolCity</span>
       </div>
+
+      {/* Header zoom overlay */}
+      {headerZoomed && (
+        <div
+          onClick={() => setHeaderZoomed(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.55)', zIndex: 20000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+          }}
+        >
+          <div style={{position: 'relative'}} onClick={(e) => e.stopPropagation()}>
+            <img src="/header.png" alt="CoolCity large" style={{maxWidth: '90vw', maxHeight: '80vh', borderRadius: 10, boxShadow: '0 20px 60px rgba(0,0,0,0.6)'}} />
+            <button
+              onClick={() => setHeaderZoomed(false)}
+              style={{position: 'absolute', right: -10, top: -10, background:'#111827', color:'white', border:'none', borderRadius:6, padding:'6px 8px', cursor:'pointer'}}
+            >Close</button>
+          </div>
+        </div>
+      )}
 
       {/* Welcome Box */}
       {showWelcome && (
