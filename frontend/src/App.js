@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 
-// Fix für Leaflet Marker Icons
+// Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -23,7 +23,7 @@ const TYPES = [
   { value: "Water playground", emoji: "🏖️", color: "#d40606ff" },
 ];
 
-/* ---- Klick-Handler: merkt Position für Formular oder Routing ---- */
+/* ---- Click handler: stores position for form or routing ---- */
 function ClickHandler({ onClick, onRouteClick, routingMode }) {
   useMapEvents({
     click(e) {
@@ -37,7 +37,7 @@ function ClickHandler({ onClick, onRouteClick, routingMode }) {
   return null;
 }
 
-/* ---- Formular-Popup beim Save ---- */
+/* ---- Form popup on save ---- */
 function AddMarkerForm({ position, onAdd, onCancel }) {
   const [type, setType] = useState("Drinking fountain");
 
@@ -104,11 +104,11 @@ export default function App() {
   const [greenRouteGeometry, setGreenRouteGeometry] = useState(null);
   const [baseRouteGeometry, setBaseRouteGeometry] = useState(null);
   
-  // Debug-Features
+  // Debug features
   const [debugTrees, setDebugTrees] = useState([]);
   const [debugParks, setDebugParks] = useState([]);
   const [showDebugTrees, setShowDebugTrees] = useState(false);
-  const [showDebugParks, setShowDebugParks] = useState(false); // Basis-Route für Vergleich
+  const [showDebugParks, setShowDebugParks] = useState(false); // Base route for comparison
   
 
 
@@ -128,20 +128,20 @@ export default function App() {
       .then(setDistricts);
   }, []);
 
-  // Auto-load Debug Features
+  // Auto-load debug features
   useEffect(() => {
-    // Automatisch Debug-Features beim Start laden UND anzeigen
+    // Automatically load debug features on start and show them
     loadDebugTrees();
     loadDebugParks();
-    
-    // Nach 2 Sekunden automatisch anzeigen
+
+    // Automatically show after 2 seconds
     setTimeout(() => {
       setShowDebugTrees(true);
       setShowDebugParks(true);
     }, 2000);
   }, []);
 
-  // Automatische Neuberechnung wenn Green Route Modus geändert wird
+  // Automatic recalculation when green route mode changes
   useEffect(() => {
     console.log('useEffect triggered: greenRouteMode =', greenRouteMode, 'routePoints.length =', routePoints.length);
     
@@ -149,21 +149,21 @@ export default function App() {
       console.log('🔄 Green Route mode changed to:', greenRouteMode, '- Recalculating route...');
       
       if (greenRouteMode) {
-        // Wechsel zu Green Route
+        // Switch to green route
         console.log('→ Switching to GREEN route');
         calculateGreenRoute(routePoints);
       } else {
-        // Wechsel zu normaler Route  
+        // Switch to normal route
         console.log('→ Switching to NORMAL route');
         calculateRoute(routePoints);
-        // Lösche grüne Route-Daten
+        // Clear green route data
         setGreenRouteGeometry(null);
         setBaseRouteGeometry(null);
       }
     } else {
       console.log('⚠️ Not enough route points for recalculation');
     }
-  }, [greenRouteMode, routePoints]); // Abhängigkeiten: beide Werte
+  }, [greenRouteMode, routePoints]); // Dependencies: both values
 
   /* ---- Load Features (on-demand) ---- */
   useEffect(() => {
@@ -234,14 +234,14 @@ export default function App() {
   function calculateRoute(points) {
     console.log('🛣️ Calculating NORMAL route with', points.length, 'points');
     
-    // Lösche zuerst grüne Route-Daten
+  // Clear green route data first
     setGreenRouteGeometry(null);
     setBaseRouteGeometry(null);
     
     const payload = {
-      points: points.map(p => [p.lng, p.lat]), // [lon, lat] für Backend
+      points: points.map(p => [p.lng, p.lat]), // [lon, lat] for backend
       costing: 'pedestrian',
-      alternatives: 3  // Berechne bis zu 3 alternative Routen
+      alternatives: 3  // Compute up to 3 alternative routes
     };
     
     fetch("http://localhost:8000/api/route", {
@@ -285,7 +285,7 @@ export default function App() {
           setShowDebugTrees(true);
         }
       })
-      .catch(err => console.error("Fehler beim Laden der Bäume:", err));
+    .catch(err => console.error("Error loading trees:", err));
   }
 
   function loadDebugParks() {
@@ -298,13 +298,13 @@ export default function App() {
           setShowDebugParks(true);
         }
       })
-      .catch(err => console.error("Fehler beim Laden der Parks:", err));
+    .catch(err => console.error("Error loading parks:", err));
   }
 
   function calculateGreenRoute(points) {
     console.log('🌳 Calculating GREEN route with', points.length, 'points');
     
-    // Lösche zuerst normale Route-Daten
+  // Clear normal route data first
     setRouteGeometry(null);
     
     const payload = {
@@ -326,7 +326,7 @@ export default function App() {
       if (data.success && data.green_route) {
         console.log("✅ Green route calculation successful!");
         
-        // Speichere beide Routen für Vergleich
+  // Save both routes for comparison
         const greenLeg = data.green_route.trip.legs[0];
         const baseLeg = data.base_route.trip.legs[0];
         
@@ -349,20 +349,20 @@ export default function App() {
         console.log("❌ Green route FAILED:", data.message);
         console.log("❌ Response data:", data);
         
-        // Fallback zur normalen Route, aber Green Mode beibehalten
+        // Fallback to normal route but keep green mode
         calculateRoute(points);
-        
-        // Zeige Benutzer-freundliche Nachricht  
-        if (data.message && data.message.includes('länger dauern')) {
-          console.warn("💡 Tipp: Erhöhe das 'Max extra time' Limit für grüne Routen!");
-          console.log(`⚠️ Grüne Route zu lang! ${data.message}`);
+
+        // Show user-friendly message
+        if (data.message && (data.message.includes('länger dauern') || data.message.includes('take longer'))) {
+          console.warn("💡 Tip: Increase the 'Max extra time' limit for green routes!");
+          console.log(`⚠️ Green route too long! ${data.message}`);
         }
       }
     })
     .catch(e => {
       console.error("❌ Green routing API ERROR:", e);
-      // Fallback zur normalen Route bei API-Fehlern
-      calculateRoute(points);
+  // Fallback to normal route on API errors
+  calculateRoute(points);
     });
   }
   
@@ -479,7 +479,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* Toolbar oben links */}
+      {/* Toolbar on the left */}
       <div
         style={{
           position: "fixed",
@@ -545,18 +545,18 @@ export default function App() {
                   console.log('🔄 Current routePoints:', routePoints.length);
                   setGreenRouteMode(newMode);
                   
-                  // Direkte Neuberechnung wenn Route existiert
+                  // Immediate recalculation when route exists
                   if (routePoints.length >= 2) {
                     console.log('→ Immediate recalculation with', routePoints.length, 'points');
                     
                     if (newMode) {
                       console.log('→ Calculating GREEN route');
-                      // Lösche erst die normale Route
+                      // Clear the normal route first
                       setRouteGeometry(null);
                       calculateGreenRoute(routePoints);
                     } else {
                       console.log('→ Calculating NORMAL route'); 
-                      // Lösche erst grüne Route-Daten
+                      // Clear green route data first
                       setGreenRouteGeometry(null);
                       setBaseRouteGeometry(null);
                       calculateRoute(routePoints);
@@ -724,7 +724,7 @@ export default function App() {
           </>
         )}
         
-        {/* Base Route (grau, durchsichtig) bei Green Route */}
+  {/* Base route (gray, transparent) for green route */}
         {baseRouteGeometry && greenRouteMode && (
           <>
             {console.log("Rendering base route (comparison):", baseRouteGeometry)}
@@ -751,11 +751,11 @@ export default function App() {
           </>
         )}
         
-        {/* Debug: Log wenn grüne Route nicht angezeigt wird */}
-        {greenRouteMode && !greenRouteGeometry && console.log("⚠️ Green route mode active but no greenRouteGeometry!")}
-        {!greenRouteMode && greenRouteGeometry && console.log("ℹ️ Green route data exists but mode is off")}
+  {/* Debug: log when green route is not displayed */}
+  {greenRouteMode && !greenRouteGeometry && console.log("⚠️ Green route mode active but no greenRouteGeometry!")}
+  {!greenRouteMode && greenRouteGeometry && console.log("ℹ️ Green route data exists but mode is off")}
 
-        {/* Debug Trees - Support für MultiPolygon */}
+  {/* Debug Trees - Support for MultiPolygon */}
         {showDebugTrees && debugTrees.map((tree, index) => {
           if (tree.geometry) {
             let polygonCoordinates = [];
@@ -802,7 +802,7 @@ export default function App() {
         })}
 
 
-       {/* Debug Parks - Support für MultiPolygon */}
+  {/* Debug Parks - Support for MultiPolygon */}
 {showDebugParks && debugParks.map((park, index) => {
   if (park.geometry) {
     let polygonCoordinates = [];

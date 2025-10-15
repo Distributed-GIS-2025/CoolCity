@@ -4,7 +4,7 @@ CoolCity Berlin
 Project Overview:
 
 This web application provides interactive routing and geospatial analysis for OpenStreetMap data, using a React frontend, FastAPI backend, and PostGIS database. Routing is powered by Valhalla. 
-The app visualizes features such as benches and water fountains for Berlin-Mitte, for the user to find a cool place for a break when visiting Berlin Mitte. Also the user is able to delete features if recognized that the features have been removed. Furthermore the user can also add new features if new owns appear in the city. The changes will be stored in the database immediately and will influence other users.
+The app visualizes features such as benches and water fountains for Berlin-Mitte, for the user to find a cool place for a break when visiting Berlin Mitte. Also the user is able to delete features if recognized that the features have been removed. Furthermore the user can also add new features if new owns appear in the city. The changes will be stored in the database immediately and will influence other users. All changes can be reset by the click of a button.  
 The routing is intended to show how to get from point A to point B and additionally when clicking on "green route" it shows the greenest route, with the most trees and parks within it to ensure more shadowing.
 
 

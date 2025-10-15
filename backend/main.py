@@ -14,7 +14,7 @@ VALHALLA_URL = os.getenv("VALHALLA_URL", "http://valhalla:8002")
 
 app = FastAPI()
 
-# CORS: Frontend darf zugreifen
+# CORS: allow frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Simple Debug-Test
 @app.get("/debug/test")
