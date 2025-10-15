@@ -15,6 +15,7 @@ Git
 
 
 Quick Start:
+
 git clone https://github.com/SOPHIEfree/osm-project.git
 cd osm-project
 docker compose up -d --build
@@ -74,10 +75,11 @@ For the routing it has to be noticed, that the calculation of the green route sh
 
 Sources:
 
-The GeoJSON of the features was created by downloading the features data of https://github.com/technologiestiftung/erfrischungskarte-frontend/ and only querying for the features we needed in Berlin-Mitte.
-The data of the trees and parks originate from openstreetmap. A buffer was created around those featured in QGIS in order for valhalla to use it properly for the green route.
-The Berlin-Mitte boundary was obtained from Overpass Turbo.
-Note that the VS Code Copilot was used to help to generate the code and the text fields. The icon of CoolCity was created by ChatGPT 5.
+1. The GeoJSON of the features was created by downloading the features data of https://github.com/technologiestiftung/erfrischungskarte-frontend/ and only querying for the features we needed in Berlin-Mitte.
+2. The data of the trees and parks originate from openstreetmap. A buffer was created around those featured in QGIS in order for valhalla to use it properly for the green route.
+3. The Berlin-Mitte boundary was obtained from Overpass Turbo.
+Note that the VS Code Copilot was used to help to generate the code and the text fields. 
+4. The icon of CoolCity was created by ChatGPT 5.
 
 Credits:
 
