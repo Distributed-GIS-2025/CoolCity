@@ -32,21 +32,21 @@ app.add_middleware(
 async def debug_test():
     return {"status": "debug endpoints working"}
 
-# Debug-Endpunkte
+# Debug endpoints
 @app.get("/debug/trees")
 async def get_trees_debug():
-    """Debug: Lade Baum-Features"""
+    """Debug: Load tree features"""
     import os
     trees_file = "/data/custom_areas/trees_buffer_mitte.geojson"
     
     if not os.path.exists(trees_file):
-        return {"error": f"Datei nicht gefunden: {trees_file}"}
+        return {"error": f"File not found: {trees_file}"}
     
     try:
         with open(trees_file, 'r') as f:
             trees_data = json.load(f)
 
-        features = trees_data.get("features", [])  # Alle Bäume laden
+        features = trees_data.get("features", [])  
         return {
             "type": "FeatureCollection",
             "features": features,
@@ -57,18 +57,18 @@ async def get_trees_debug():
 
 @app.get("/debug/parks")  
 async def get_parks_debug():
-    """Debug: Lade Park-Features"""
+    """Debug: Load park features"""
     import os
     parks_file = "/data/custom_areas/parks_buffer_mitte.geojson"
     
     if not os.path.exists(parks_file):
-        return {"error": f"Datei nicht gefunden: {parks_file}"}
+        return {"error": f"File not found: {parks_file}"}
     
     try:
         with open(parks_file, 'r') as f:
             parks_data = json.load(f)
 
-        features = parks_data.get("features", [])  # Alle Parks laden
+        features = parks_data.get("features", [])  
         return {
             "type": "FeatureCollection", 
             "features": features,
@@ -182,12 +182,12 @@ async def ping():
 
 @app.get("/trees-simple")
 async def get_trees_simple():
-    """Einfacher Endpunkt für Bäume - für direkten Browser-Test"""
+    """Simple trees endpoint for quick browser testing"""
     try:
         with open("/data/custom_areas/trees_buffer_mitte.geojson", 'r') as f:
             data = json.load(f)
         return {
-            "message": f"Erfolgreich {len(data.get('features', []))} Baum-Features geladen!",
+            "message": f"Successfully loaded {len(data.get('features', []))} tree features!",
             "count": len(data.get('features', [])),
             "first_feature": data.get('features', [{}])[0] if data.get('features') else None
         }
@@ -196,45 +196,40 @@ async def get_trees_simple():
 
 @app.post("/api/route")
 async def route(body: dict):
-    """
-    Erwarte body:
-    {
-      "points": [[lon,lat],[lon,lat], ...],
-      "costing": "pedestrian" | "bicycle" | "auto" (optional),
-      "alternatives": 3 (optional, für alternative Routen)
-    }
+    """Simple proxy to Valhalla route endpoint.
+
+    Expects a JSON body with:
+      - points: list of [lon, lat] pairs (at least two)
+      - costing: optional (pedestrian/bicycle/auto)
+      - alternatives: optional number of alternatives (max 3)
+    Returns the Valhalla response JSON.
     """
     pts = body.get("points", [])
     if len(pts) < 2:
         return {"error": "need at least two points [[lon,lat],[lon,lat]]"}
 
-    locations = [{"lat": lat, "lon": lon} for lon, lat in pts]  # lon/lat -> lat/lon
-    
-    # Optimierte Payload für schnellste Fußgängerroute mit Alternativen
+    locations = [{"lat": lat, "lon": lon} for lon, lat in pts]
+
     payload = {
-        "locations": locations, 
+        "locations": locations,
         "costing": body.get("costing", "pedestrian"),
         "costing_options": {
             "pedestrian": {
-                "walking_speed": 5.1,      # Standard Gehgeschwindigkeit (nur für Zeitschätzung)
-                "step_penalty": 0,         # Keine Strafe für Treppen/Stufen
+                "walking_speed": 5.1,
+                "step_penalty": 0,
                 "max_hiking_difficulty": 6,
-                "use_ferry": 0.0,          # Keine Fähren
-                "use_living_streets": 1.0, # Wohnstraßen bevorzugen
-                "use_tracks": 0.5,         # Feldwege teilweise erlauben
-                "shortest": True         # Schnellste, nicht kürzeste Route
+                "use_ferry": 0.0,
+                "use_living_streets": 1.0,
+                "use_tracks": 0.5,
+                "shortest": True,
             }
         },
-        "directions_options": {
-            "units": "kilometers",
-            "language": "de"
-        }
+        "directions_options": {"units": "kilometers", "language": "de"},
     }
-    
-    # Alternative Routen falls gewünscht
+
     alternatives = body.get("alternatives", 1)
     if alternatives > 1:
-        payload["alternates"] = min(alternatives, 3)  # Maximal 3 Alternativen
+        payload["alternates"] = min(alternatives, 3)
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(f"{VALHALLA_URL}/route", json=payload)
@@ -243,15 +238,16 @@ async def route(body: dict):
 
 @app.post("/api/green-route")
 async def green_route(body: dict):
-    """
-    Grüne Route durch Parks und baumreiche Gebiete.
-    Body:
-    {
-      "points": [[lon,lat],[lon,lat], ...],
-      "max_extra_minutes": 5,  # Max. zusätzliche Zeit in Minuten
-      "prefer_parks": true,    # Parks bevorzugen
-      "prefer_trees": true     # Baumreiche Gebiete bevorzugen
-    }
+    """Compute a green-aware pedestrian route.
+
+    Body parameters:
+      - points: list of [lon, lat] pairs (at least two)
+      - max_extra_minutes: allowed additional minutes compared to the base route
+      - prefer_parks / prefer_trees: booleans to include parks/trees
+
+    The function computes a base pedestrian route, requests multiple
+    pedestrian alternatives with parameters favoring footways/tracks, and
+    selects the route that overlaps most with configured green polygons.
     """
     pts = body.get("points", [])
     if len(pts) < 2:
@@ -260,93 +256,68 @@ async def green_route(body: dict):
     max_extra_minutes = body.get("max_extra_minutes", 5)
     prefer_parks = body.get("prefer_parks", True)
     prefer_trees = body.get("prefer_trees", True)
-    
+
     locations = [{"lat": lat, "lon": lon} for lon, lat in pts]
-    
-    # Erst normale Route berechnen als Referenz
-    base_payload = {
-        "locations": locations, 
-        "costing": "pedestrian",
-        "directions_options": {"units": "kilometers"}
-    }
-    
+
+    base_payload = {"locations": locations, "costing": "pedestrian", "directions_options": {"units": "kilometers"}}
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         base_response = await client.post(f"{VALHALLA_URL}/route", json=base_payload)
         base_response.raise_for_status()
         base_data = base_response.json()
-        
+
         base_time = 0
         if base_data.get("trip", {}).get("legs"):
             base_time = base_data["trip"]["legs"][0]["summary"]["time"]
-        
-        # Lade grüne Gebiete aus GeoJSON-Dateien
+
         green_polygons = load_green_polygons(prefer_parks, prefer_trees)
-        
-        # Ansatz: Mehrere Routen-Alternativen generieren und die "grünste" wählen
+
         green_payload = {
             "locations": locations,
             "costing": "pedestrian",
-            "alternates": 10,  # Generiere 3 alternative Routen
+            "alternates": 10,
             "costing_options": {
                 "pedestrian": {
                     "shortest": False,
-                    "use_roads": 0.2,           # Straßen reduziert nutzen
-                    "use_tracks": 1.0,          # Waldwege maximal nutzen
-                    "use_footway": 1.0,         # Fußwege maximal nutzen  
-                    "use_living_streets": 0.8,  # Wohnstraßen mehr nutzen
-                    "use_sidewalk": 0.9,        # Gehwege bevorzugen
-                    "walking_speed": 5.1,       # Langsamere Geschwindigkeit
+                    "use_roads": 0.2,
+                    "use_tracks": 1.0,
+                    "use_footway": 1.0,
+                    "use_living_streets": 0.8,
+                    "use_sidewalk": 0.9,
+                    "walking_speed": 5.1,
                     "step_penalty": 0,
                     "max_hiking_difficulty": 6,
-                    "walkway_factor": 1.8,      # Gehwege bevorzugen
-                    "sidewalk_factor": 1.4,     # Gehsteige bevorzugen
-                    "alley_factor": 0.9,        # Gassen erlauben
-                    "driveway_factor": 0.7      # Zufahrten weniger nutzen
+                    "walkway_factor": 1.8,
+                    "sidewalk_factor": 1.4,
+                    "alley_factor": 0.9,
+                    "driveway_factor": 0.7,
                 }
             },
-            "directions_options": {
-                "units": "kilometers"
-            }
+            "directions_options": {"units": "kilometers"},
         }
-        
-        # Berechne grüne Route
+
         green_response = await client.post(f"{VALHALLA_URL}/route", json=green_payload)
         green_response.raise_for_status()
         green_data = green_response.json()
-        
-        # Wähle die grünste Route aus den möglichen Alternativen
+
         if green_polygons:
             green_leg = select_greenest_route(green_data, green_polygons)
         else:
-            # Fallback: erste Route nehmen
             green_leg = green_data.get("trip", {}).get("legs", [{}])[0]
-        
-        # Zeit vergleichen
+
         green_time = 0
         if green_leg and green_leg.get("summary"):
             green_time = green_leg["summary"]["time"]
-            
+
         extra_time_minutes = (green_time - base_time) / 60
-        
-        # Prüfe ob Zeit-Limit eingehalten wird
+
         if extra_time_minutes > max_extra_minutes:
-            return {
-                "success": False,
-                "message": f"Grüne Route würde {extra_time_minutes:.1f} Minuten länger dauern (Limit: {max_extra_minutes} min)",
-                "base_route": base_data,
-                "extra_time": extra_time_minutes
-            }
-        
-        return {
-            "success": True,
-            "green_route": {"trip": {"legs": [green_leg]}} if green_leg else green_data,
-            "base_route": base_data,
-            "extra_time": extra_time_minutes,
-            "green_polygons_used": len(green_polygons) if green_polygons else 0
-        }
+            return {"success": False, "message": f"Green route would take {extra_time_minutes:.1f} minutes longer (limit: {max_extra_minutes} min)", "base_route": base_data, "extra_time": extra_time_minutes}
+
+        return {"success": True, "green_route": {"trip": {"legs": [green_leg]}} if green_leg else green_data, "base_route": base_data, "extra_time": extra_time_minutes, "green_polygons_used": len(green_polygons) if green_polygons else 0}
 
 def load_green_polygons(prefer_parks=True, prefer_trees=True):
-    """Lade grüne Gebiete als Valhalla-kompatible Polygone."""
+    """Load green areas and convert them to Valhalla-compatible polygons."""
     polygons = []
     
     try:
@@ -356,12 +327,12 @@ def load_green_polygons(prefer_parks=True, prefer_trees=True):
                 parks_data = json.load(f)
                 for feature in parks_data.get('features', []):
                     if feature.get('geometry', {}).get('type') == 'Polygon':
-                        # Valhalla erwartet [lng, lat] Koordinaten
+                        # Valhalla expects [lon, lat] coordinates
                         coords = feature['geometry']['coordinates'][0]
-                        # Konvertiere zu Valhalla Format: Liste von {"lat": x, "lon": y}
+                        # Convert to Valhalla format: list of {"lat": x, "lon": y}
                         valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
                         polygons.append(valhalla_coords)
-                print(f"Parks geladen: {len(parks_data.get('features', []))} Features")
+                print(f"Parks loaded: {len(parks_data.get('features', []))} features")
                 
         if prefer_trees:
             trees_file = "/data/custom_areas/trees_buffer_mitte.geojson"
@@ -372,20 +343,20 @@ def load_green_polygons(prefer_parks=True, prefer_trees=True):
                         coords = feature['geometry']['coordinates'][0]
                         valhalla_coords = [{"lat": coord[1], "lon": coord[0]} for coord in coords]
                         polygons.append(valhalla_coords)
-                print(f"Trees geladen: {len(trees_data.get('features', []))} Features")
+                print(f"Trees loaded: {len(trees_data.get('features', []))} features")
                 
     except Exception as e:
-        print(f"Fehler beim Laden der grünen Gebiete: {e}")
+        print(f"Error loading green areas: {e}")
         
-    print(f"Insgesamt {len(polygons)} grüne Polygone für Valhalla geladen")
+    print(f"Loaded {len(polygons)} green polygons for Valhalla in total")
     return polygons
 
 def create_inverse_polygons(green_polygons):
-    """Erstelle avoid_polygons außerhalb der grünen Bereiche."""
+    """Create avoid_polygons outside the green areas (placeholder)."""
     return []
 
 def select_greenest_route(route_response, green_polygons):
-    """Wähle die Route aus, die am meisten durch grüne Bereiche führt."""
+    """Select the route that goes through the most green areas."""
     
     trip = route_response.get("trip", {})
     legs = trip.get("legs", [])
@@ -393,11 +364,11 @@ def select_greenest_route(route_response, green_polygons):
     if not legs:
         return None
         
-    # Wenn nur eine Route zurückgegeben wird, nimm diese
+    # If only one route is returned, use it
     if len(legs) == 1:
         return legs[0]
     
-    # Bewerte jede Route nach "Grünheit"
+    # Score each route by its "greenness"
     best_route = None
     best_green_score = -1
     
@@ -410,46 +381,50 @@ def select_greenest_route(route_response, green_polygons):
     return best_route if best_route else legs[0]
 
 def calculate_green_score(route_leg, green_polygons):
-    """Berechne wie "grün" eine Route ist basierend auf tatsächlicher Überschneidung."""
-    
+    """Calculate how 'green' a route is based on overlap with green polygons.
+
+    The function decodes the Valhalla polyline (if present) and samples every
+    5th point to check whether it lies inside any supplied green polygon. If
+    shapely/polyline are not available or an error occurs, a simple heuristic
+    based on route summary (time/length) is returned.
+    """
     if not green_polygons:
         return 0
-        
-    # Dekodiere die Route-Shape zu Koordinaten
+
+    # Decode the route shape to coordinates
     shape = route_leg.get("shape", "")
     if not shape:
         return 0
-        
+
     try:
         import polyline
         from shapely.geometry import Point, Polygon
-        
-        # Dekodiere Polyline
+
         coordinates = polyline.decode(shape)
-        
-        green_points = 0
         total_points = len(coordinates)
-        
         if total_points == 0:
             return 0
-        
-        # Für jeden Punkt der Route: prüfe ob in grünem Bereich
-        for lat, lon in coordinates[::5]:  # Nur jeder 5. Punkt für Performance
+
+        green_points = 0
+        # Sample every 5th point for performance
+        sampled = coordinates[::5]
+        for lat, lon in sampled:
             if is_point_in_green_areas_precise(lat, lon, green_polygons):
                 green_points += 1
-                
-        return green_points / (total_points // 5) if total_points > 0 else 0
-        
+
+        denom = max(1, len(sampled))
+        return green_points / denom
+
     except Exception as e:
-        print(f"Fehler bei Green-Score-Berechnung: {e}")
-        # Fallback: einfache Heuristik
+        print(f"Error calculating green score: {e}")
+        # Fallback: simple heuristic based on route summary
         summary = route_leg.get("summary", {})
-        time_score = summary.get("time", 0) / 3600  
-        length_score = summary.get("length", 0) / 1000 
+        time_score = summary.get("time", 0) / 3600
+        length_score = summary.get("length", 0) / 1000
         return time_score * 0.6 + length_score * 0.4
 
 def is_point_in_green_areas_precise(lat, lon, green_polygons):
-    """Präziser Point-in-Polygon-Test mit Shapely."""
+    """Precise point-in-polygon test using Shapely."""
     try:
         from shapely.geometry import Point, Polygon
         
@@ -457,9 +432,9 @@ def is_point_in_green_areas_precise(lat, lon, green_polygons):
         
         for poly_coords in green_polygons:
             try:
-                # Konvertiere Valhalla-Format zu Shapely Polygon
+                # Convert Valhalla-format to Shapely Polygon
                 coords = [(coord["lon"], coord["lat"]) for coord in poly_coords]
-                if len(coords) >= 3:  # Mindestens 3 Punkte für Polygon
+                if len(coords) >= 3:  # At least 3 points for a polygon
                     polygon = Polygon(coords)
                     if polygon.is_valid and polygon.contains(point):
                         return True
@@ -468,13 +443,17 @@ def is_point_in_green_areas_precise(lat, lon, green_polygons):
                 
         return False
     except ImportError:
-        # Fallback zu einfacherem Test
+        # Fallback to a simpler test if Shapely is not available
         return is_point_in_green_areas(lat, lon, green_polygons)
 
 def is_point_in_green_areas(lat, lon, green_polygons):
-    """Vereinfachte Point-in-Polygon-Test ohne externe Libraries."""
-    
-    # Einfacher Bounding-Box Test als Näherung
+    """Simplified point-in-polygon test without external libraries.
+
+    This uses a bounding-box approximation for performance and when shapely
+    is not installed.
+    """
+
+    # Simple bounding-box test as an approximation
     for poly_coords in green_polygons:
         try:
             lats = [coord["lat"] for coord in poly_coords]
@@ -483,7 +462,7 @@ def is_point_in_green_areas(lat, lon, green_polygons):
             min_lat, max_lat = min(lats), max(lats)
             min_lon, max_lon = min(lons), max(lons)
             
-            # Punkt in Bounding Box?
+            # Point inside bounding box?
             if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
                 return True
         except Exception:
@@ -492,7 +471,7 @@ def is_point_in_green_areas(lat, lon, green_polygons):
     return False
 
 def load_green_areas(prefer_parks=True, prefer_trees=True):
-    """Legacy-Funktion - lade als einfache Koordinaten-Arrays."""
+    """Legacy helper - load green areas as plain coordinate arrays."""
     green_areas = []
     
     if prefer_parks:
@@ -501,7 +480,7 @@ def load_green_areas(prefer_parks=True, prefer_trees=True):
                 parks_data = json.load(f)
                 for feature in parks_data.get("features", []):
                     if feature.get("geometry", {}).get("type") == "Polygon":
-                        coords = feature["geometry"]["coordinates"][0]  # Äußerer Ring
+                        coords = feature["geometry"]["coordinates"][0]  # outer ring
                         green_areas.append(coords)
         except FileNotFoundError:
             pass

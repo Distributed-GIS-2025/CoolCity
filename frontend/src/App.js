@@ -445,6 +445,27 @@ export default function App() {
 
   return (
     <>
+      {/* Site header */}
+      <div style={{
+        position: 'fixed',
+        top: 12,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10001,
+        background: 'rgba(255,255,255,0.95)',
+        padding: '6px 12px',
+        borderRadius: 8,
+        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+        fontWeight: 700,
+        fontSize: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10
+      }}>
+  <img src="/header.png" alt="CoolCity" style={{height:36, width:'auto', borderRadius:6}} />
+        <span>CoolCity</span>
+      </div>
+
       {/* Welcome Box */}
       {showWelcome && (
         <div style={{
