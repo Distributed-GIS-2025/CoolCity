@@ -81,6 +81,12 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
 }
 
 export default function App() {
+  // Welcome box: show on every page load (no persistence)
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+  };
   const [markers, setMarkers] = useState([]);
   const [newPosition, setNewPosition] = useState(null);
   const [activeTypes, setActiveTypes] = useState([]); // Start with no features visible
@@ -439,6 +445,40 @@ export default function App() {
 
   return (
     <>
+      {/* Welcome Box */}
+      {showWelcome && (
+        <div style={{
+          position: 'fixed',
+          top: 12,
+          right: 12,
+          zIndex: 10000,
+          maxWidth: 360,
+          background: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: '12px 14px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+          lineHeight: 1.35
+        }}>
+          <div style={{display:'flex', alignItems:'start', gap:8}}>
+            <div style={{fontSize:20}}>👋</div>
+            <div>
+              <div style={{fontWeight:600, marginBottom:4}}>Welcome to CoolCity!</div>
+              <div style={{fontSize:13, color:'#374151'}}>
+                • Use the map to explore features like benches, parks, and fountains.<br/>
+                • Click "Start Routing" to add at least two points and calculate a route.<br/>
+                • Enable "GREEN ROUTE" to prefer paths through parks and trees. Adjust the max extra time if needed.
+              </div>
+            </div>
+          </div>
+          <div style={{display:'flex', justifyContent:'flex-end', marginTop:10}}>
+            <button onClick={dismissWelcome} style={{
+              background:'#111827', color:'white', border:'none', borderRadius:6,
+              padding:'6px 10px', cursor:'pointer'
+            }}>Got it</button>
+          </div>
+        </div>
+      )}
       {/* Toolbar oben links */}
       <div
         style={{
