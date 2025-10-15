@@ -471,6 +471,11 @@ export default function App() {
           style={{height:36, width:'auto', borderRadius:6, cursor: 'pointer', transition: 'transform 180ms ease'}}
         />
         <span>CoolCity</span>
+        <a href="https://github.com/SOPHIEfree/osm-project" target="_blank" rel="noreferrer" title="Open GitHub repo" style={{marginLeft:8}}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{display:'block'}}>
+            <path fillRule="evenodd" clipRule="evenodd" d="M12 .5C5.73.5.75 4.98.75 10.22c0 4.3 2.87 7.94 6.84 9.23.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.61-3.37-1.2-3.37-1.2-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1.01.07 1.54 1.04 1.54 1.04.9 1.53 2.36 1.09 2.93.83.09-.65.35-1.09.64-1.34-2.22-.26-4.56-1.12-4.56-4.99 0-1.1.39-2 .99-2.7-.1-.25-.43-1.27.09-2.64 0 0 .81-.26 2.65 1.03.77-.21 1.59-.31 2.4-.31.81 0 1.63.11 2.4.31 1.84-1.29 2.65-1.03 2.65-1.03.52 1.37.19 2.39.09 2.64.61.7.99 1.6.99 2.7 0 3.88-2.35 4.72-4.59 4.98.36.31.68.92.68 1.86 0 1.34-.01 2.42-.01 2.75 0 .27.18.59.69.49C20.39 18.15 23.25 14.5 23.25 10.23 23.25 4.98 18.27.5 12 .5z" fill="#111827"/>
+          </svg>
+        </a>
       </div>
 
       {/* Header zoom overlay */}
