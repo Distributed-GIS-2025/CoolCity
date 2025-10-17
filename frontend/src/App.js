@@ -1,5 +1,5 @@
 import { useState, useEffect} from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON, Polyline, Marker, Polygon } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents, ZoomControl, GeoJSON, Polyline, Marker, Polygon, ScaleControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -40,6 +40,37 @@ function ClickHandler({ onClick, onRouteClick, routingMode }) {
 /* ---- Form popup on save ---- */
 function AddMarkerForm({ position, onAdd, onCancel }) {
   const [type, setType] = useState("Drinking fountain");
+  const map = useMap();
+
+  // Remove "Park" from the dropdown
+  const featureTypes = TYPES.filter(t => t.value !== "Park");
+
+  // Keep the popup anchored to the map point
+  const [latlng, setLatlng] = useState([position.lat, position.lng]);
+  useEffect(() => {
+    setLatlng([position.lat, position.lng]);
+  }, [position.lat, position.lng]);
+
+  // Fix: Prevent map click handler from firing when clicking inside the popup (including Cancel)
+  useEffect(() => {
+    function handleMapClick(e) {
+      // Only close if click is not on the popup form or its children
+      // Use a more robust check for React 18+ event delegation
+      const popupEls = document.getElementsByClassName('custom-add-marker-popup');
+      let inside = false;
+      for (let el of popupEls) {
+        if (el.contains(e.originalEvent.target)) {
+          inside = true;
+          break;
+        }
+      }
+      if (!inside) {
+        onCancel();
+      }
+    }
+    map.on('click', handleMapClick);
+    return () => map.off('click', handleMapClick);
+  }, [map, onCancel]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -47,33 +78,92 @@ function AddMarkerForm({ position, onAdd, onCancel }) {
   }
 
   return (
-    <Popup position={[position.lat, position.lng]} onClose={onCancel}>
-      <form onSubmit={handleSubmit} style={{ minWidth: 180 }}>
-        <label style={{ display: "block", marginBottom: 6 }}>
-          Type:
+    <Popup
+      position={latlng}
+      closeButton={false}
+      closeOnClick={false}
+      autoClose={false}
+      className="custom-add-marker-popup"
+      eventHandlers={{
+        popupclose: onCancel
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="custom-add-marker-popup"
+        style={{
+          minWidth: 200,
+          background: "#f8fafc",
+          borderRadius: 10,
+          padding: "14px 12px 8px 12px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10
+        }}
+        // Prevent click events from bubbling to the map
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 20, lineHeight: 1 }}>➕</span>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>Add a new feature</span>
+        </div>
+        <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
+          Choose the feature:
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            style={{ width: "100%", marginTop: 4 }}
+            style={{
+              width: "100%",
+              marginTop: 6,
+              padding: "6px 8px",
+              borderRadius: 6,
+              border: "1px solid #d1d5db",
+              fontSize: 14,
+              background: "#fff"
+            }}
           >
-            {TYPES.map((t) => (
+            {featureTypes.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.value}
+                {t.emoji} {t.value}
               </option>
             ))}
           </select>
         </label>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={e => {
+              e.stopPropagation(); // Prevent map click
               onCancel();
+            }}
+            style={{
+              background: "#f3f4f6",
+              color: "#374151",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
+              padding: "6px 14px",
+              cursor: "pointer",
+              fontWeight: 500
             }}
           >
             Cancel
           </button>
-          <button type="submit">Save</button>
+          <button
+            type="submit"
+            style={{
+              background: "#2563eb",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              cursor: "pointer",
+              fontWeight: 600,
+              boxShadow: "0 1px 4px rgba(37,99,235,0.10)"
+            }}
+          >
+            Add feature
+          </button>
         </div>
       </form>
     </Popup>
@@ -507,32 +597,36 @@ export default function App() {
       {showWelcome && (
         <div style={{
           position: 'fixed',
-          top: 12,
-          right: 12,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
           zIndex: 10000,
-          maxWidth: 360,
+          maxWidth: 520,
+          minWidth: 340,
           background: 'white',
           border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding: '12px 14px',
+          borderRadius: 10,
+          padding: '24px 32px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-          lineHeight: 1.35
+          lineHeight: 1.35,
+          textAlign: 'left'
         }}>
-          <div style={{display:'flex', alignItems:'start', gap:8}}>
-            <div style={{fontSize:20}}>👋</div>
+          <div style={{display:'flex', alignItems:'start', gap:16}}>
+            <div style={{fontSize:28}}>👋</div>
             <div>
-              <div style={{fontWeight:600, marginBottom:4}}>Welcome to CoolCity!</div>
-              <div style={{fontSize:13, color:'#374151'}}>
-                • Use the map to explore features like benches, parks, and fountains.<br/>
-                • Click "Start Routing" to add at least two points and calculate a route.<br/>
-                • Enable "GREEN ROUTE" to prefer paths through parks and trees. Adjust the max extra time if needed.
+              <div style={{fontWeight:600, marginBottom:8, fontSize:18}}>Welcome to CoolCity!</div>
+              <div style={{fontSize:15, color:'#374151'}}>
+                • Use the blue button on the right to explore different points and areas.<br/>
+                • Click on the map to add or delete points.<br/>
+                • Click the routing button in top-right corner to create a route between two points.<br/>
+                • Press the Green route toggle to create a shadowed path through parks and trees. Adjust the max extra time if needed.
               </div>
             </div>
           </div>
-          <div style={{display:'flex', justifyContent:'flex-end', marginTop:10}}>
+          <div style={{display:'flex', justifyContent:'flex-end', marginTop:18}}>
             <button onClick={dismissWelcome} style={{
               background:'#111827', color:'white', border:'none', borderRadius:6,
-              padding:'6px 10px', cursor:'pointer'
+              padding:'8px 18px', cursor:'pointer', fontSize:15
             }}>Got it</button>
           </div>
         </div>
@@ -599,52 +693,73 @@ export default function App() {
               fontWeight: 500
             }}>
               Click on the map to add <b>start</b> and <b>end</b> points.<br />
-              <span style={{ color: "#888", fontSize: "12px" }}>
-                (Only two points allowed)
-              </span>
+              
             </div>
 
-            {/* Green Route Toggle Button */}
+            {/* Green Route Toggle Switch */}
             <div style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 10,
               marginBottom: 2
             }}>
-              <button
-                onClick={() => setGreenRouteMode(v => !v)}
-                style={{
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+                gap: 8,
+                userSelect: "none"
+              }}>
+                <span style={{
+                  fontSize: "15px",
+                  color: greenRouteMode ? "#169d47" : "#888",
+                  fontWeight: greenRouteMode ? 700 : 400,
+                  marginRight: 2
+                }}>
+                  🌳 Green route
+                </span>
+                <span style={{
+                  fontSize: "13px",
+                  color: "#888",
+                  marginRight: 8
+                }}>
+                  
+                </span>
+                <input
+                  type="checkbox"
+                  checked={greenRouteMode}
+                  onChange={() => setGreenRouteMode(v => !v)}
+                  style={{ display: "none" }}
+                />
+                <span style={{
                   width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: greenRouteMode
-                    ? "linear-gradient(135deg, #28a745 60%, #169d47 100%)"
-                    : "#eee",
-                  color: greenRouteMode ? "#fff" : "#169d47",
-                  border: "none",
-                  boxShadow: greenRouteMode
-                    ? "0 2px 8px rgba(40,167,69,0.18)"
-                    : "none",
-                  fontSize: "26px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "background 0.2s, color 0.2s"
-                }}
-                title="Toggle green route"
-              >
-                🌳
-              </button>
+                  height: 24,
+                  borderRadius: 12,
+                  background: greenRouteMode ? "#28a745" : "#ccc",
+                  display: "inline-block",
+                  position: "relative",
+                  transition: "background 0.2s"
+                }}>
+                  <span style={{
+                    position: "absolute",
+                    left: greenRouteMode ? 22 : 2,
+                    top: 2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: "#fff",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                    transition: "left 0.2s"
+                  }} />
+                </span>
+              </label>
               <span style={{
                 fontSize: "13px",
-                color: greenRouteMode ? "#169d47" : "#888",
-                fontWeight: greenRouteMode ? 600 : 400
+                color: !greenRouteMode ? "#007bff" : "#888",
+                fontWeight: !greenRouteMode ? 600 : 400,
+                marginLeft: 8
               }}>
-                {greenRouteMode
-                  ? "Green route (through parks & trees)"
-                  : "Normal route"}
+                {!greenRouteMode ? "" : ""}
               </span>
             </div>
 
@@ -691,7 +806,7 @@ export default function App() {
                   letterSpacing: "0.5px"
                 }}
               >
-                ❌ Clear Route ({routePoints.length})
+                Clear Route
               </button>
             )}
 
@@ -827,7 +942,7 @@ export default function App() {
                   width: 40,
                   height: 40,
                   borderRadius: "50%",
-                  background: showDebugTrees ? "#169d47" : "#eee",
+                  background: showDebugTrees ? "#2ecc40" : "#eee",
                   color: showDebugTrees ? "#fff" : "#888",
                   display: "flex",
                   alignItems: "center",
@@ -899,7 +1014,8 @@ export default function App() {
         scrollWheelZoom
         zoomControl={false} 
       >
-        <ZoomControl position="topright" /> 
+        <ZoomControl position="topright" />
+        <ScaleControl position="bottomleft" maxWidth={150} metric={true} imperial={false} />
         <TileLayer
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -944,7 +1060,7 @@ export default function App() {
             {console.log("🌳 RENDERING green route with", greenRouteGeometry.length, "points, greenRouteMode:", greenRouteMode)}
             <Polyline
               positions={greenRouteGeometry}
-              color="#28a745"
+              color="#035416ff"
               weight={5}
               opacity={0.9}
             />
@@ -984,8 +1100,8 @@ export default function App() {
                   key={`tree-${index}`}
                   positions={coords}
                   color="#105b01ff"
-                  fillColor="#0cac0cff"
-                  fillOpacity={0.5}
+                  fillColor="#04b75bff"
+                  fillOpacity={0.3}
                   weight={2}
                 >
                   <Popup>
