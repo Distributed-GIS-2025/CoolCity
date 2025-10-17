@@ -111,6 +111,9 @@ export default function App() {
   const [showDebugParks, setShowDebugParks] = useState(false); // Base route for comparison
   const [headerZoomed, setHeaderZoomed] = useState(false);
   
+  // Explore City
+  const [exploreOpen, setExploreOpen] = useState(false);
+
 
 
   /* Filter */
@@ -131,15 +134,14 @@ export default function App() {
 
   // Auto-load debug features
   useEffect(() => {
-    // Automatically load debug features on start and show them
+    // Automatisch Debug-Features beim Start laden, aber NICHT anzeigen
     loadDebugTrees();
     loadDebugParks();
-
-    // Automatically show after 2 seconds
-    setTimeout(() => {
-      setShowDebugTrees(true);
-      setShowDebugParks(true);
-    }, 2000);
+    // Entfernt: setTimeout zum automatischen Anzeigen
+    // setTimeout(() => {
+    //   setShowDebugTrees(true);
+    //   setShowDebugParks(true);
+    // }, 2000);
   }, []);
 
   // Automatic recalculation when green route mode changes
@@ -219,17 +221,20 @@ export default function App() {
 
   /* ---- Routing Functions ---- */
   function handleRouteClick(position) {
-    const newPoints = [...routePoints, position];
-    setRoutePoints(newPoints);
-    console.log("Route point added:", position, "Total points:", newPoints.length);
-    
-    if (newPoints.length >= 2) {
-      if (greenRouteMode) {
-        calculateGreenRoute(newPoints);
-      } else {
-        calculateRoute(newPoints);
+    // Only allow two waypoints for routing
+    if (routePoints.length < 2) {
+      const newPoints = [...routePoints, position];
+      setRoutePoints(newPoints);
+
+      if (newPoints.length === 2) {
+        if (greenRouteMode) {
+          calculateGreenRoute(newPoints);
+        } else {
+          calculateRoute(newPoints);
+        }
       }
     }
+    // Ignore clicks after two waypoints
   }
   
   function calculateRoute(points) {
@@ -283,7 +288,7 @@ export default function App() {
         console.log("Trees debug data:", data);
         if (data.features) {
           setDebugTrees(data.features);
-          setShowDebugTrees(true);
+          // setShowDebugTrees(true); // REMOVE this line!
         }
       })
     .catch(err => console.error("Error loading trees:", err));
@@ -296,7 +301,7 @@ export default function App() {
         console.log("Parks debug data:", data);
         if (data.features) {
           setDebugParks(data.features);
-          setShowDebugParks(true);
+          // setShowDebugParks(true); // REMOVE this line!
         }
       })
     .catch(err => console.error("Error loading parks:", err));
@@ -553,197 +558,339 @@ export default function App() {
         <button
           onClick={toggleRoutingMode}
           style={{
-            background: routingMode ? "#007bff" : "#f8f9fa",
-            color: routingMode ? "white" : "black",
-            border: "1px solid #ddd",
-            borderRadius: 4,
-            padding: "4px 8px",
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: routingMode
+              ? "linear-gradient(135deg, #007bff 60%, #00bcd4 100%)"
+              : "linear-gradient(135deg, #e0e0e0 60%, #bdbdbd 100%)",
+            color: routingMode ? "#fff" : "#222",
+            border: "none",
+            boxShadow: routingMode
+              ? "0 2px 12px rgba(0,123,255,0.18)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+            fontSize: "28px",
+            fontWeight: 700,
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             marginBottom: 4,
-            width: "100%"
+            transition: "background 0.2s, color 0.2s"
           }}
+          title={routingMode ? "Exit Routing" : "Start Routing"}
         >
-          🗺️ {routingMode ? "Exit Routing" : "Start Routing"}
+          🗺️
         </button>
 
         {routingMode && (
-          <>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: 4 }}>
-              Click on map to add route points
-            </div>
-            
-
-
-            {/* Debug Info */}
-            <div style={{ 
-              fontSize: "12px", 
-              color: "red", 
-              backgroundColor: "yellow", 
-              padding: "4px", 
-              marginBottom: 4,
-              border: "2px solid red"
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 4
+          }}>
+            <div style={{
+              fontSize: "13px",
+              color: "#333",
+              marginBottom: 2,
+              textAlign: "center",
+              fontWeight: 500
             }}>
-              🔍 DEBUG: Mode={greenRouteMode ? 'GREEN' : 'NORMAL'} | 
-              Routes: normal={routeGeometry ? 'YES' : 'NO'}, green={greenRouteGeometry ? 'YES' : 'NO'}
+              Click on the map to add <b>start</b> and <b>end</b> points.<br />
+              <span style={{ color: "#888", fontSize: "12px" }}>
+                (Only two points allowed)
+              </span>
             </div>
 
-            {/* Green Route Toggle */}
-            <label style={{ fontSize: "12px", display: "flex", alignItems: "center", marginBottom: 4 }}>
-              <input 
-                type="checkbox" 
-                checked={greenRouteMode}
-                onChange={(e) => {
-                  const newMode = e.target.checked;
-                  console.log('🔄 GREEN ROUTE CHECKBOX CLICKED! New mode:', newMode);
-                  console.log('🔄 Current routePoints:', routePoints.length);
-                  setGreenRouteMode(newMode);
-                  
-                  // Immediate recalculation when route exists
-                  if (routePoints.length >= 2) {
-                    console.log('→ Immediate recalculation with', routePoints.length, 'points');
-                    
-                    if (newMode) {
-                      console.log('→ Calculating GREEN route');
-                      // Clear the normal route first
-                      setRouteGeometry(null);
-                      calculateGreenRoute(routePoints);
-                    } else {
-                      console.log('→ Calculating NORMAL route'); 
-                      // Clear green route data first
-                      setGreenRouteGeometry(null);
-                      setBaseRouteGeometry(null);
-                      calculateRoute(routePoints);
-                    }
-                  } else {
-                    console.log('⚠️ No route points - skipping recalculation');
-                  }
+            {/* Green Route Toggle Button */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 2
+            }}>
+              <button
+                onClick={() => setGreenRouteMode(v => !v)}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: greenRouteMode
+                    ? "linear-gradient(135deg, #28a745 60%, #169d47 100%)"
+                    : "#eee",
+                  color: greenRouteMode ? "#fff" : "#169d47",
+                  border: "none",
+                  boxShadow: greenRouteMode
+                    ? "0 2px 8px rgba(40,167,69,0.18)"
+                    : "none",
+                  fontSize: "26px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "background 0.2s, color 0.2s"
                 }}
-                style={{ marginRight: 4 }}
-              />
-              🌳 GREEN ROUTE TEST - UPDATED! (through parks & trees)
-              {routePoints.length >= 2 && (
-                <span style={{ fontSize: "10px", color: "#666", marginLeft: 8 }}>
-                  (Auto-recalculates)
-                </span>
-              )}
-            </label>
-            
+                title="Toggle green route"
+              >
+                🌳
+              </button>
+              <span style={{
+                fontSize: "13px",
+                color: greenRouteMode ? "#169d47" : "#888",
+                fontWeight: greenRouteMode ? 600 : 400
+              }}>
+                {greenRouteMode
+                  ? "Green route (through parks & trees)"
+                  : "Normal route"}
+              </span>
+            </div>
+
             {/* Max Extra Time Slider */}
             {greenRouteMode && (
-              <div style={{ fontSize: "11px", marginBottom: 4 }}>
-                <label>Max extra time: {maxExtraMinutes} min</label>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="15" 
+              <div style={{
+                fontSize: "12px",
+                marginBottom: 2,
+                width: "100%",
+                textAlign: "center"
+              }}>
+                <label>
+                  Max extra time: <b>{maxExtraMinutes} min</b>
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="15"
                   value={maxExtraMinutes}
-                  onChange={(e) => setMaxExtraMinutes(parseInt(e.target.value))}
-                  style={{ width: "100%", marginTop: 2 }}
+                  onChange={e => setMaxExtraMinutes(parseInt(e.target.value))}
+                  style={{
+                    width: "100%",
+                    marginTop: 2
+                  }}
                 />
               </div>
             )}
-            
-            {/* Debug Controls */}
-            <div style={{ marginTop: 8, padding: "4px 0", borderTop: "1px solid #ddd" }}>
-              <div style={{ fontSize: "10px", color: "#666", marginBottom: 4 }}>Debug Features:</div>
-              
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                <button 
-                  onClick={loadDebugTrees}
-                  style={{ fontSize: "9px", padding: "2px 4px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 2 }}
-                >
-                  Load Trees ({debugTrees.length})
-                </button>
-                <label style={{ fontSize: "9px", display: "flex", alignItems: "center" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={showDebugTrees}
-                    onChange={(e) => setShowDebugTrees(e.target.checked)}
-                    style={{ marginRight: 2, transform: "scale(0.8)" }}
-                  />
-                  Show
-                </label>
-              </div>
-              
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <button 
-                  onClick={loadDebugParks}
-                  style={{ fontSize: "9px", padding: "2px 4px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: 2 }}
-                >
-                  Load Parks ({debugParks.length})
-                </button>
-                <label style={{ fontSize: "9px", display: "flex", alignItems: "center" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={showDebugParks}
-                    onChange={(e) => setShowDebugParks(e.target.checked)}
-                    style={{ marginRight: 2, transform: "scale(0.8)" }}
-                  />
-                  Show
-                </label>
-              </div>
-            </div>
             
             {routePoints.length > 0 && (
               <button
                 onClick={clearRoute}
                 style={{
-                  background: "#dc3545",
-                  color: "white",
+                  background: "linear-gradient(135deg, #ff5252 60%, #ff1744 100%)",
+                  color: "#fff",
                   border: "none",
-                  borderRadius: 4,
-                  padding: "4px 8px",
+                  borderRadius: "50px",
+                  padding: "8px 18px",
                   cursor: "pointer",
-                  width: "100%",
-                  marginBottom: 4
+                  width: "auto",
+                  marginBottom: 4,
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  boxShadow: "0 2px 8px rgba(255,23,68,0.12)",
+                  letterSpacing: "0.5px"
                 }}
               >
-                Clear Route ({routePoints.length} points)
+                ❌ Clear Route ({routePoints.length})
               </button>
             )}
-            
+
             {/* Route Info */}
             {routeInfo && (
-              <div style={{ 
-                fontSize: "11px", 
-                background: routeInfo.type === 'green' ? "#d4edda" : "#e9ecef", 
-                padding: "4px 6px", 
-                borderRadius: 4,
-                marginTop: 4 
+              <div style={{
+                fontSize: "13px",
+                background: routeInfo.type === 'green' ? "#d4edda" : "#e9ecef",
+                padding: "8px 10px",
+                borderRadius: 6,
+                marginTop: 4,
+                textAlign: "center",
+                fontWeight: 500,
+                letterSpacing: "0.2px"
               }}>
-                <div>📏 {routeInfo.distance} {routeInfo.unit}</div>
-                <div>⏱️ {routeInfo.time} min{routeInfo.extraTime ? ` (+${routeInfo.extraTime} min)` : ''}</div>
-                {routeInfo.type === 'green' && <div>🌳 Green route through parks!</div>}
+                <div style={{ fontSize: "15px", color: "#007bff", fontWeight: 700, marginBottom: 2 }}>
+                  Route summary
+                </div>
+                <div style={{ fontSize: "16px", color: "#222", fontWeight: 700, marginBottom: 2 }}>
+                  ⏱️ {routeInfo.time} min
+                </div>
+                <div style={{ fontSize: "16px", color: "#169d47", fontWeight: 700, marginBottom: 2 }}>
+                  📏 {routeInfo.distance} {routeInfo.unit}
+                </div>
+                {routeInfo.extraTime && (
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>
+                    Extra time for green route: +{routeInfo.extraTime} min
+                  </div>
+                )}
               </div>
             )}
-          </>
+          </div>
         )}
+      </div>
 
+      {/* Explore the city floating button (middle right) */}
+      <div
+        style={{
+          position: "fixed",
+          top: "50%",
+          right: 24,
+          transform: "translateY(-50%)",
+          zIndex: 9999,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+        onClick={e => e.stopPropagation()} // Prevent propagation to map
+      >
+        {/* Main circle button */}
         <button
-          onClick={() =>
-            fetch("http://localhost:8000/reset_features", { method: "POST" })
-              .then((r) => r.json())
-              .then(() =>
-                fetch("http://localhost:8000/features")
-                  .then((r) => r.json())
-                  .then(setMarkers)
-              )
-          }
+          onClick={e => {
+            e.stopPropagation();
+            setExploreOpen((v) => !v);
+          }}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #4f8cff 60%, #2ecc40 100%)",
+            color: "#fff",
+            border: "2px solid #007bff",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
+            fontSize: "32px",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: exploreOpen ? 16 : 0,
+            transition: "box-shadow 0.2s"
+          }}
+          title="Explore the city"
         >
-          ♻️ Reset from OSM
+          🏙️
         </button>
-        
-        {TYPES.map(t => (
-          <button
-            key={t.value}
-            onClick={() => toggleType(t.value)}
-            style={{
-              opacity: activeTypes.includes(t.value) ? 1 : 0.4
-            }}
-          >
-            {t.emoji} {t.value}
-          </button>
-        ))}
+        {/* Emoji filter circles and checkboxes */}
+        {exploreOpen && (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            marginTop: 0,
+            position: "relative"
+          }}>
+            {/* Point filter buttons (emoji only, circle) */}
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              alignItems: "center"
+            }}>
+              {TYPES.filter(t => t.value !== "Park").map((t, i) => (
+                <button
+                  key={t.value}
+                  onClick={e => {
+                    e.stopPropagation();
+                    toggleType(t.value);
+                  }}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: activeTypes.includes(t.value) ? t.color : "#eee",
+                    color: activeTypes.includes(t.value) ? "#fff" : "#888",
+                    border: "2px solid #007bff",
+                    boxShadow: activeTypes.includes(t.value) ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
+                    fontSize: "22px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background 0.2s, color 0.2s"
+                  }}
+                  title={t.value}
+                >
+                  {t.emoji}
+                </button>
+              ))}
+            </div>
+            {/* Show trees polygons (circle checkbox) */}
+            <div style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: 12,
+              marginTop: 4,
+              alignItems: "center"
+            }}>
+              <label
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: showDebugTrees ? "#169d47" : "#eee",
+                  color: showDebugTrees ? "#fff" : "#888",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "22px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: showDebugTrees ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
+                  border: "2px solid #007bff",
+                  transition: "background 0.2s, color 0.2s"
+                }}
+                title="Show Trees"
+                onClick={e => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={showDebugTrees}
+                  onChange={e => {
+                    e.stopPropagation();
+                    setShowDebugTrees(e.target.checked);
+                  }}
+                  style={{
+                    display: "none"
+                  }}
+                />
+                🌳
+              </label>
+              <label
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: showDebugParks ? "#2ecc40" : "#eee",
+                  color: showDebugParks ? "#fff" : "#888",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "22px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: showDebugParks ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
+                  border: "2px solid #007bff",
+                  transition: "background 0.2s, color 0.2s"
+                }}
+                title="Show Parks"
+                onClick={e => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={showDebugParks}
+                  onChange={e => {
+                    e.stopPropagation();
+                    setShowDebugParks(e.target.checked);
+                  }}
+                  style={{
+                    display: "none"
+                  }}
+                />
+                🏞️
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       <MapContainer 
@@ -836,10 +983,10 @@ export default function App() {
                 <Polygon
                   key={`tree-${index}`}
                   positions={coords}
-                  color="#FF0000"
-                  fillColor="#00FF00"
-                  fillOpacity={0.9}
-                  weight={4}
+                  color="#105b01ff"
+                  fillColor="#0cac0cff"
+                  fillOpacity={0.5}
+                  weight={2}
                 >
                   <Popup>
                     🌳 Baum #{index + 1}<br/>
@@ -885,8 +1032,8 @@ export default function App() {
           positions={coords}
           color="#0000FF"
           fillColor="#ADD8E6"
-          fillOpacity={0.8}
-          weight={5}
+          fillOpacity={0.5}
+          weight={2}
         >
           <Popup>
             🏞️ Park #{index + 1}<br/>
@@ -929,13 +1076,12 @@ export default function App() {
                 background:${color};
                 color:white;
                 border-radius:50%;
-                width:32px;
-                height:32px;
+                width:12px;
+                height:12px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
                 font-weight:bold;
-                
               "></div>`,
               className: "custom-cluster",
               iconSize: [32, 32],
