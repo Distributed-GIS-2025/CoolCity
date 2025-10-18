@@ -618,7 +618,7 @@ export default function App() {
               <div style={{fontSize:15, color:'#374151'}}>
                 • Use the blue button on the right to explore different points and areas.<br/>
                 • Click on the map to add or delete points.<br/>
-                • Click the routing button in top-right corner to create a route between two points.<br/>
+                • Click the routing button in top-left corner to create a route between two points.<br/>
                 • Press the Green route toggle to create a shadowed path through parks and trees. Adjust the max extra time if needed.
               </div>
             </div>
