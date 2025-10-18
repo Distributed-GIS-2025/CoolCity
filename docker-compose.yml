@@ -10,27 +10,6 @@ services:
     depends_on:
       - backend  
 
-  # valhalla (alte, fehlerhafte Konfiguration):
-  # valhalla:
-  #   #image: ghcr.io/valhalla/valhalla:scripted #notworking
-  #   #image: ghcr.io/gis-ops/docker-valhalla:latest #not working
-  #   image: ghcr.io/valhalla/valhalla-scripted:latest
-  #   container_name: valhalla
-  #   ports:
-  #     - "8002:8002"              # Valhalla API
-  #   volumes:
-  #     - ./osm:/data             # berlin.osm.pbf liegt hier
-  #   environment:
-  #     - build_tiles=true        # Tiles beim Start aus der PBF bauen
-  #     - use_tiles_ignore_pbf=false
-  #     - force_rebuild=false
-  #     # optional (beschleunigt Build auf Berlin-BBox):
-  #     # - min_x=13.0
-  #     # - min_y=52.3
-  #     # - max_x=13.8
-  #     # - max_y=52.7
-  #   restart: unless-stopped
-
   # valhalla (funktionierende Konfiguration mit Berlin Mitte BBox):
   valhalla:
     image: ghcr.io/valhalla/valhalla:latest
