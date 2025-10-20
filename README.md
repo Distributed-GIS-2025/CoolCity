@@ -16,10 +16,9 @@ Git
 
 Quick Start:
 
-git clone https://github.com/SOPHIEfree/osm-project.git <br/>
-cd osm-project <br/>
-docker compose up -d --build
-
+git clone https://github.com/Distributed-GIS-2025/CoolCity.git <br/>
+cd CoolCity <br/>
+docker compose up -d --build
 
 Services:
 
