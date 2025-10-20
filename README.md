@@ -16,7 +16,7 @@ Git
 
 Quick Start:
 
-git clone https://github.com/SOPHIEfree/osm-project.git
+git clone https://github.com/SOPHIEfree/osm-project.git <br/>
 cd osm-project
 docker compose up -d --build
 
